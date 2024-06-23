@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Agendar Videoconferência</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-5">Agendar Videoconferência</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="data">Escolha a data:</label>
+                <input type="text" class="form-control" id="data" name="data" required>
+            </div>
+            <div class="form-group">
+                <label for="hora">Escolha o horário:</label>
+                <select class="form-control" id="hora" name="hora" required>
+                    <option value="">Selecione um horário</option>
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <!-- Adicione mais opções conforme necessário -->
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Agendar</button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+        $( function() {
+            $( "#data" ).datepicker({
+                dateFormat: 'dd/mm/yy',
+                minDate: 0
+            });
+        } );
+    </script>
+</body>
+</html>

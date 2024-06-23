@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>CERTIFICADO DIGITAL</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-5">Vamos iniciar a emissão do seu <strong>CERTIFICADO DIGITAL</strong></h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="voucher_code">Insira seu Voucher</label>
+                <input type="text" class="form-control" id="voucher_code" name="voucher_code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Verificar Voucher</button>
+        </form>
+    </div>
+</body>
+</html>
