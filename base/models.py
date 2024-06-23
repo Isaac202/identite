@@ -17,7 +17,7 @@ class Voucher(models.Model):
      #   return decrypt_voucher(self.code)
 
     def __str__(self):
-        return self.code()
+        return self.code
 
 class Pedidos(models.Model):
     pedido = models.CharField(max_length=255)
