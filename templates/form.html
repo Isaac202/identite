@@ -3,11 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Formulário com Seções e Barra de Progresso</title>
+    <title>Formulário</title>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .hidden {
             display: none;
+        }
+        .container {
+            max-width: 600px; /* Limita a largura do formulário */
+            margin: 0 auto; /* Centraliza o formulário */
+            padding: 20px; /* Adiciona padding ao formulário */
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px; /* Reduz o padding em telas menores */
+            }
         }
     </style>
 </head>
