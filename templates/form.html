@@ -40,12 +40,12 @@
                 <input name="email" type="email" class="form-control" id="email" placeholder="Email">
             </div>
             <div class="form-group">
-                <label for="telefone">Telefone</label>
-                <input name="telefone" type="telefone" class="form-control" id="telefone" placeholder="Telefone">
+                <label for="telefone">Whatsapp</label>
+                <input name="telefone" type="telefone" class="form-control" id="telefone" placeholder="Whatsapp">
             </div>
             <div class="form-group">
                 <label for="data_nacimento">Data Nascimento</label>
-                <input name="data_nacimento" type="data_nacimento" class="form-control" id="data_nacimento" placeholder="Data Nascimento">
+                <input name="data_nacimento" type="data_nacimento" class="form-control" id="data_nascimento" placeholder="Data Nascimento">
             </div>
             <button type="button" class="btn btn-primary" onclick="nextSection(2)">Próximo</button>
         </div>
@@ -55,7 +55,7 @@
             <h3>Dados da Empresa</h3>
             <div class="form-group">
                 <label for="CNPJ">CNPJ</label>
-                <input name="cnpj" type="text" class="form-control" id="CNPJ" placeholder="CNPJ">
+                <input name="cnpj" type="text" class="form-control" id="cnpj" placeholder="CNPJ">
             </div>
             <div class="form-group">
                 <label for="nomeRazaoSocial">Nome/Razão Social</label>
@@ -75,7 +75,7 @@
             <h3>Dados de Endereço</h3>
             <div class="form-group">
                 <label for="cep">CEP</label>
-                <input type="text" class="form-control" name="cep" placeholder="CEP">
+                <input type="text" class="form-control" name="cep" id= "cep" placeholder="CEP">
             </div>
             <div class="form-group">
                 <label for="logradouro">Logradouro</label>
@@ -130,8 +130,32 @@
     </form>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 <script>
+    $(document).ready(function(){
+        $('#cpf').mask('000.000.000-00', {reverse: true});
+        $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
+        $('#data_nascimento').mask('0000-00-00');
+        $('#telefone').mask('(00) 0 0000-0000');
+        $('#cep').mask('00000-000');
+        $('#cep').change(function(){
+            var cep = $(this).val().replace('-', '');
+
+            if (cep.length == 8) {
+                $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data){
+                    if (!("erro" in data)) {
+                        $('input[name="logradouro"]').val(data.logradouro);
+                        $('input[name="bairro"]').val(data.bairro);
+                        $('input[name="cidade"]').val(data.localidade);
+                        $('input[name="uf"]').val(data.uf);
+                        $('input[name="codigoIBGE"]').val(data.ibge);
+                    }
+                });
+            }
+        });
+    });
     let currentSection = 1;
 
     function updateProgressBar() {
