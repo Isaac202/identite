@@ -60,8 +60,10 @@ def form(request,slug=None):
             novo_cliente.cod_ibge = request.POST["codigoIBGE"]
         if request.POST["telefone"].strip():
             novo_cliente.telefone = request.POST["telefone"]
-        if "rg" in request.FILES:
-            novo_cliente.rg = request.FILES["rg"]
+        if "rg-frente" in request.FILES:
+            novo_cliente.rg_frente = request.FILES["rg-frente"]
+        if "rg-verso" in request.FILES:
+            novo_cliente.rg_verso = request.FILES["rg-verso"]
         if "cnh" in request.FILES:
             novo_cliente.carteira_identidade = request.FILES["cnh"]
         novo_cliente.voucher_id = voucher.id
