@@ -16,12 +16,15 @@ class Voucher(models.Model):
     #def get_decrypted_code(self):
      #   return decrypt_voucher(self.code)
 
-    #def __str__(self):
-     #   return self.get_decrypted_code()
+    def __str__(self):
+        return self.code()
 
 class Pedidos(models.Model):
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f'Numero do Pedido:{self.pedido}'
 class DadosCliente(models.Model):
     nome_completo = models.CharField(max_length=255)
     nome_fantasia = models.CharField(max_length=255)
@@ -47,6 +50,9 @@ class DadosCliente(models.Model):
         upload_to=upload_image_book, blank=True, null=True)
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{self.nome_completo}'
 
 class Agendamento(models.Model):
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
