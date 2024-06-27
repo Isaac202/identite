@@ -149,11 +149,12 @@ def gerar_protocolo_view(request, pedido=None):
         erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
         print(erros,"Erros")
         print(protocolo,"Protocolo")
-        if erros:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
+        
         status_pedido = consultar_status_pedido(pedido)
         if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
             return redirect('agendar_videoconferencia', pedido=pedido)
+        if erros:
+            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
         if protocolo is not None:
             return render(request, 'agendar_videoconferencia.html', {'pedido': pedido})
         else:
