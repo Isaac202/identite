@@ -83,11 +83,8 @@ def form(request,slug=None):
                 rg_verso = base64.b64encode(request.FILES["rg-verso"].read()).decode('utf-8')
 
             if "cnh" in request.FILES:
-                print("Entrou no CNH")
                 cnh = base64.b64encode(request.FILES["cnh"].read()).decode('utf-8')
-            print(rg_frente, rg_verso, cnh)
             salvar_arquivos_cliente.delay(novo_cliente.id, rg_frente, rg_verso, cnh)
-            print("Salvou os arquivos")
             return redirect('gerar_protocolo', pedido=pedido.pedido) # redireciona para a view de agendamento
         else:
             return render(request, 'form.html', {'erro': erro,'slug': slug})
