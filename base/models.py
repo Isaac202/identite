@@ -7,14 +7,6 @@ class Voucher(models.Model):
     code = models.CharField(max_length=255, unique=True)  # Aumente o tamanho para armazenar o voucher encriptado
     is_valid = models.BooleanField(default=True)
 
-    #def save(self, *args, **kwargs):
-     #   if not self.pk:  # Se o objeto ainda não foi salvo no banco de dados
-      #      self.code = encrypt_voucher(self.code)
-       # super().save(*args, **kwargs)
-
-    #def get_decrypted_code(self):
-     #   return decrypt_voucher(self.code)
-
     def __str__(self):
         return self.code
 

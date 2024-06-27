@@ -117,6 +117,12 @@ def agendar_videoconferencia(request, pedido=None):
         agendamento = Agendamento(pedido=get_pedido, data=data, hora=hora_inicial)
         agendamento.save()
 
+        # Instancie o voucher e atualize para inválido
+        dados_cliente = DadosCliente.objects.get(pedido=get_pedido)
+        voucher = dados_cliente.voucher
+        voucher.is_valid = False
+        voucher.save()
+
         # Redireciona para a página de agradecimento e orientação.
         return redirect('agradecimento_orientacao')
 
@@ -128,6 +134,8 @@ def agendar_videoconferencia(request, pedido=None):
         return render(request, 'gerar_protocolo_view.html', {'erro': erro})
 
     return render(request, 'agendar_videoconferencia.html', {'pedido': pedido, 'slots_agenda': slots_agenda})
+
+
 
 def agradecimento_orientacao(request):
     return render(request, 'agradecimento.html')
