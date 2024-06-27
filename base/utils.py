@@ -3,6 +3,8 @@ import json
 from cryptography.fernet import Fernet
 from django.conf import settings
 
+from base.models import Pedidos
+
 def encrypt_voucher(voucher_code):
     fernet = Fernet(settings.SECRET_KEY_CRYPTO.encode())
     encrypted_voucher = fernet.encrypt(voucher_code.encode()).decode()
@@ -13,9 +15,8 @@ def decrypt_voucher(encrypted_voucher):
     decrypted_voucher = fernet.decrypt(encrypted_voucher.encode()).decode()
     return decrypted_voucher
 
-
-
 '''
+
 
 {
 	"apiKey": "123ChaveDisponibilizadaPeloSistema456",
@@ -50,6 +51,8 @@ def decrypt_voucher(encrypted_voucher):
 }
 '''
 
+import json
+
 def salvar_venda(cliente):
     endpoint = 'https://apiconsulti.gestaoar.com.br/consultibrasil/'
     apiKey = "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502"
@@ -74,7 +77,7 @@ def salvar_venda(cliente):
             "CEP": cliente.cep,
             "Logradouro": cliente.logradouro,
             "Numero": cliente.numero,
-            "Complemento":cliente.complementp,
+            "Complemento":cliente.complemento,
             "Bairro": cliente.bairro,
             "Cidade": cliente.cidade,
             "UF": cliente.uf,
@@ -88,21 +91,157 @@ def salvar_venda(cliente):
             }
         ]
     }
-    response = requests.post(
-            f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
 
-    if response.status_code == 200:
-        payload = {
+def salvar_venda(cliente):
+    endpoint = 'https://apiconsulti.gestaoar.com.br/consultibrasil/api/GarAPIs/'
+    apiKey = "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502"
+    HashVendedor=  "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
+    HashTabela = "86d7f05b-a75d-4e1f-b4a2-3558424e678a"
+    FormaPagamento = 11
+    CodigoVoucher = cliente.voucher.code
+
+    headers = {'Content-Type': 'application/json'}
+    print(cliente.telefone[0:2],cliente.telefone[2:])
+    payload = {
         "apiKey": apiKey,
-        "Pedido": response["Produtos"][0]["Pedido"],
-        "CNPJ": cliente.cnpj, 
-        "CPF": cliente.cpf,
-        "DataNascimento":cliente.data_nacimento ,#"1987-12-31",
-        "IsPossuiCNH": True if cliente.carteira_identidade else False
-        }
-        response_emissao_protocolo = requests.post(
-            f"{endpoint}/EmitirProtocolo", json.dumps(payload), headers=headers)
-        if response_emissao_protocolo.status_code == 200:
-            return response_emissao_protocolo.json()
-        return response.json()
-    return response.json()
+        "HashVendedor": HashVendedor,
+        "HashTabela": HashTabela,
+        "FormaPagamento": FormaPagamento,
+        "CodigoVoucher": CodigoVoucher,
+        "Cliente":{
+            "CNPJCPF": cliente.cpf if cliente.cnpj == None else cliente.cnpj,
+            "NomeRazaoSocial": cliente.razao_social,
+            "NomeFantasia": cliente.nome_fantasia,
+            "Email": cliente.email,
+            "CEP": cliente.cep,
+            "Logradouro": cliente.logradouro,
+            "Numero": cliente.numero,
+            "Complemento":cliente.complemento,
+            "Bairro": cliente.bairro,
+            "Cidade": cliente.cidade,
+            "UF": cliente.uf,
+            "CodigoIBGE": cliente.cod_ibge,
+            "DDD": cliente.telefone[0:2],
+            "Telefone": cliente.telefone[2:]
+        },
+        "Produtos": [
+            {
+                "HashProduto": "e9eaa186-f11e-4a08-9f22-387c6c60e035"
+            }
+        ]
+    }
+
+    response = requests.post(f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
+    if response.status_code == 200 and response.text.strip():
+        try:
+            response_data = response.json()
+            if "Erros" in response_data:
+                erros = response_data["Erros"]
+                for erro in erros:
+                    print(erro["Ocorrencia"])
+                    return None ,erro["Ocorrencia"]
+            else:
+                pedido = Pedidos(pedido=response_data["Produtos"][0]["Pedido"], protocolo="")
+                pedido.save()
+                return pedido, None
+        except json.decoder.JSONDecodeError:
+            print("JSONDecodeError: A resposta não é um JSON válido")
+    else:
+        print(f"Erro: A requisição retornou o status {response.status_code}")
+    return None
+
+
+
+def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
+    url = 'https://apiconsulti.gestaoar.com.br/consultibrasil/api/GarAPIs/'  # Substitua pela URL da API que gera os protocolos
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+        "Pedido": pedido,
+        "CNPJ": cnpj,
+        "CPF": cpf,
+        "DataNascimento": data_nascimento,
+        "IsPossuiCNH": is_possui_cnh
+    }
+
+    response = requests.post(f'{url}EmitirProtocolo', data=json.dumps(payload), headers=headers)
+    if response.status_code == 200:
+        try:
+            response_data = response.json()
+            print(response_data)
+            if 'ErrorCode' in response_data:
+                erros = [erro['ErrorDescription'] for erro in response_data if 'ErrorDescription' in erro]
+                return None, erros
+            else:
+                return response_data, None
+        except json.decoder.JSONDecodeError:
+            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    else:
+        return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+    
+
+
+
+def obter_disponibilidade_agenda():
+    url = 'https://apiconsulti.gestaoar.com.br/consultibrasil/api/GarAPIs/ObterDisponibilidadeAgenda'
+    headers = {"Content-Type": "application/json"}
+    payload = {
+       "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+        "DataInicial": "2024-06-27",
+        "DataFinal": "2024-07-29",
+        "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
+    }
+
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    if response.status_code == 200:
+        try:
+            response_data = response.json()
+            return response_data, None
+        except json.decoder.JSONDecodeError:
+            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    else:
+        return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+    
+
+
+def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
+    url = 'https://apiconsulti.gestaoar.com.br/consultibrasil/api/GarAPIs/AgendarPedido'
+    headers = {"Content-Type": "application/json"}
+    payload = { 
+        "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+        "HashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157",
+        "DataInicial": f"{data} {hora_inicial}",
+        "DataFinal": f"{data} {hora_final}",
+        "HashVenda": hash_venda,
+        "IsCliente":"1"
+    }
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    if response.status_code == 200:
+        try:
+            response_data = response.json()
+            return response_data, None
+        except json.decoder.JSONDecodeError:
+            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    else:
+        return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+    
+
+
+def consultar_status_pedido(pedido):
+    url = 'https://apiconsulti.gestaoar.com.br/consultibrasil/api/GarAPIs/ConsultaPedidoProtocolo'
+    headers = {"Content-Type": "application/json"}
+    payload = { 
+                "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+                "Pedido": pedido,
+                "Protocolo": ""
+    }
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    if response.status_code == 200:
+        try:
+            response_data = response.json()
+            hash_venda = response_data
+            return hash_venda, None
+        except json.decoder.JSONDecodeError:
+            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    else:
+        return None, [f"Erro: A requisição retornou o status {response.status_code}"]

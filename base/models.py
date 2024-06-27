@@ -1,5 +1,4 @@
 from django.db import models
-from .utils import encrypt_voucher, decrypt_voucher
 
 def upload_image_book(instance, filename):
     return f"documentos_identite/{instance.nome_completo}-{filename}"
@@ -19,12 +18,17 @@ class Voucher(models.Model):
     def __str__(self):
         return self.code
 
+
+
 class Pedidos(models.Model):
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
+    hashVenda = models.CharField(max_length=255)
 
     def __str__(self):
         return f'Numero do Pedido:{self.pedido}'
+
+
 class DadosCliente(models.Model):
     nome_completo = models.CharField(max_length=255)
     nome_fantasia = models.CharField(max_length=255)
@@ -63,3 +67,7 @@ class Agendamento(models.Model):
         return f'Agendamento para o pedido {self.pedido.id} em {self.data} às {self.hora}'
     
 
+
+
+class Slots(models.Model):
+    hashSlot = models.CharField(max_length=255, unique=True)

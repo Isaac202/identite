@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Agendar Videoconferência</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <style>
         .container {
             max-width: 600px; /* Limita a largura do formulário */
@@ -22,41 +21,111 @@
             .form-control, .btn {
                 font-size: 1rem; /* Ajusta o tamanho da fonte em telas menores */
             }
+            .form-check-label {
+                font-size: 0.8rem; /* Reduz o tamanho da fonte dos labels em telas menores */
+            }
+            .form-check {
+                margin-bottom: 0.5rem; /* Reduz o espaço entre os checkboxes em telas menores */
+            }
+        }
+        .scroll-container {
+            overflow-x: auto;
+            display: flex;
+            flex-wrap: nowrap;
+        }
+        .scroll-container > .col-sm-6 {
+            flex: 0 0 auto;
         }
     </style>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/drag-scroll/0.0.8/dragscroll.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h2 class="mt-5">Agendar Videoconferência</h2>
-        <form method="post">
+        <h2 class="mt-5">Selecione uma data e Horario e click em Agendar</h2>
+        <form id="myForm" action="{% url 'agendar_videoconferencia' pedido=pedido %}" method="post">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="data">Escolha a data:</label>
-                <input type="text" class="form-control" id="data" name="data" required>
-            </div>
-            <div class="form-group">
-                <label for="hora">Escolha o horário:</label>
-                <select class="form-control" id="hora" name="hora" required>
-                    <option value="">Selecione um horário</option>
-                    <option value="09:00">09:00</option>
-                    <option value="10:00">10:00</option>
-                    <option value="11:00">11:00</option>
-                    <!-- Adicione mais opções conforme necessário -->
-                </select>
+            <div class="row">
+                {% for data in slots_agenda.Datas %}
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h3 class="data-agenda">{{ data.DataAgenda }}</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row scroll-container">
+                                    {% for horario in data.Horarios %}
+                                        <div class="col-sm-6" style="border: 0.5px solid; margin: 2px; padding: 3px; border-radius: 5px;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="slot" id="slot{{ forloop.parentloop.counter }}-{{ forloop.counter }}" value="{{ data.DataAgenda }};{{ horario.HoraInicial }};{{ horario.HoraFinal }}" required>
+                                                <label class="form-check-label d-block" for="slot{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                                    <span class="badge badge-pill badge-primary p-2 mb-1 d-inline-block">
+                                                        Início: {{ horario.HoraInicial }}
+                                                    </span>
+                                                    <span class="badge badge-pill badge-secondary p-2 d-inline-block">
+                                                        Fim: {{ horario.HoraFinal }}
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if forloop.counter|divisibleby:2 %}
+                        </div><div class="row">
+                    {% endif %}
+                {% endfor %}
             </div>
             <button type="submit" class="btn btn-primary">Agendar</button>
         </form>
     </div>
 
-    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="confirmModalLabel">Confirmação de Agendamento</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              Você deseja agendar para a data e hora selecionadas?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
     <script>
-        $( function() {
-            $( "#data" ).datepicker({
-                dateFormat: 'dd/mm/yy',
-                minDate: 0
+        var datasAgenda = document.getElementsByClassName('data-agenda');
+        var opcoes = { day: '2-digit', month: 'long', year: 'numeric' };
+    
+        for (var i = 0; i < datasAgenda.length; i++) {
+            var data = new Date(datasAgenda[i].textContent);
+            datasAgenda[i].textContent = data.toLocaleDateString('pt-BR', opcoes);
+        }
+    </script>
+    <script>
+        var checkboxes = document.getElementsByClassName('form-check-input');
+    
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].addEventListener('change', function() {
+                if (this.checked) {
+                    $('#confirmModal').modal('show');
+                }
             });
-        } );
+        }
+    </script>
+    <script>
+        document.getElementById('confirmButton').addEventListener('click', function() {
+            document.getElementById('myForm').submit();
+        });
     </script>
 </body>
 </html>
