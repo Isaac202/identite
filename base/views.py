@@ -99,7 +99,7 @@ def agendar_videoconferencia(request, pedido=None):
         print(data, hora_inicial, hora_final)
         get_pedido = Pedidos.objects.get(pedido=pedido)
         hash_venda, error = consultar_status_pedido(pedido)
-        if hash_venda["isProtocolo"] == '0':
+        if hash_venda["StatusPedido"] != 'Protocolo Gerado':
             error = "O protocolo ainda não foi gerado."
             return render(request, 'protocolo.html', {'pedido': pedido, 'erro_protocolo': error})
         # Agende o pedido
@@ -142,6 +142,9 @@ def gerar_protocolo_view(request, pedido=None):
         is_possui_cnh = True if dados_cliente.carteira_identidade else False   
 
         erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
+        print(erros, protocolo)
+        if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
+            return redirect('agendar_videoconferencia', pedido=pedido)
         if protocolo is not None:
             return render(request, 'agendar_videoconferencia.html', {'pedido': pedido})
         else:

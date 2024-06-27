@@ -21,8 +21,9 @@ def consultar_status_pedido(pedido):
             return None, ["JSONDecodeError: A resposta não é um JSON válido"]
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
-hash_venda, error = consultar_status_pedido('21438')
+hash_venda, error = consultar_status_pedido('21508')
 
-
-print(hash_venda["isProtocolo"] == '0')
+if hash_venda["StatusPedido"] != 'Protocolo Gerado':
+    print("O protocolo ainda não foi gerado.")
+print(hash_venda)
 print(error)
