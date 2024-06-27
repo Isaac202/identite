@@ -102,8 +102,6 @@ def agendar_videoconferencia(request, pedido=None):
         # Converta a data e a hora para o formato correto
         data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S").date()
     
-        print("Depois de converter")
-        print(data, hora_inicial, hora_final)
         get_pedido = Pedidos.objects.get(pedido=pedido)
         hash_venda, error = consultar_status_pedido(pedido)
         if hash_venda["StatusPedido"] != 'Protocolo Gerado':
@@ -143,13 +141,17 @@ def gerar_protocolo_view(request, pedido=None):
         cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")  # Remove a máscara do CNPJ
         cpf = request.POST.get('cpf').replace(".", "").replace("-", "")  # Remove a máscara do CPF
         data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')  # Altera o formato da data
-
+        print(data_nascimento)
         # Pega os outros dados do objeto dados_cliente
         pedido = dados_cliente.pedido.pedido
         is_possui_cnh = True if dados_cliente.carteira_identidade else False   
 
         erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
-        print(erros, protocolo)
+        print(erros,"Erros")
+        print(protocolo,"Protocolo")
+        if erros:
+            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
+        status_pedido = consultar_status_pedido(pedido)
         if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
             return redirect('agendar_videoconferencia', pedido=pedido)
         if protocolo is not None:
