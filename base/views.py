@@ -30,7 +30,6 @@ def form(request,slug=None):
         except Voucher.DoesNotExist:
             return render(request, 'invalid.html', {'code': slug})
     if request.method == 'POST':
-        pedidos = Pedidos.objects.get(id=1)
         
         novo_cliente = DadosCliente()
         if request.POST["nomeCompleto"].strip():
