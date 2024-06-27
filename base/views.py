@@ -74,11 +74,20 @@ def form(request,slug=None):
         if pedido is not None:
             novo_cliente.pedido_id = pedido.id
             novo_cliente.save()
-            if "rg-frente" in request.FILES and "rg-verso" in request.FILES and "cnh" in request.FILES:
+            rg_frente = rg_verso = cnh = None
+
+            if "rg-frente" in request.FILES:
                 rg_frente = base64.b64encode(request.FILES["rg-frente"].read()).decode('utf-8')
+
+            if "rg-verso" in request.FILES:
                 rg_verso = base64.b64encode(request.FILES["rg-verso"].read()).decode('utf-8')
+
+            if "cnh" in request.FILES:
+                print("Entrou no CNH")
                 cnh = base64.b64encode(request.FILES["cnh"].read()).decode('utf-8')
-                salvar_arquivos_cliente.delay(novo_cliente.id, rg_frente, rg_verso, cnh)
+            print(rg_frente, rg_verso, cnh)
+            salvar_arquivos_cliente.delay(novo_cliente.id, rg_frente, rg_verso, cnh)
+            print("Salvou os arquivos")
             return redirect('gerar_protocolo', pedido=pedido.pedido) # redireciona para a view de agendamento
         else:
             return render(request, 'form.html', {'erro': erro,'slug': slug})

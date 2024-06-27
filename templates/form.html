@@ -91,7 +91,7 @@
             </div>
             <div class="form-group">
                 <label for="complemento">Complemento</label>
-                <input type="text" class="form-control" name="complemento" placeholder="Complemento">
+                <input type="text" class="form-control" name="complemento">
             </div>
             <div class="form-group">
                 <label for="bairro">Bairro</label>
@@ -115,20 +115,22 @@
 
         <div id="section4" class="hidden">
             <h3>Documentos</h3>
-            <div class="form-group">
-                <label for="rg-frente">RG Frente</label>
-                <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente" required>
-            </div>
-            <div class="form-group">
-                <label for="rg-verso">RG Verso</label>
-                <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso" required>
-            </div>
-            <div class="form-group">
-                <label for="cnh">Carteira de Habilitação</label>
-                <input type="file" class="form-control" name="cnh" placeholder="Carteira de Habilitação" required>
-            </div>
-            <button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
-            <button type="submit" class="btn btn-primary mt-3">Enviar</button>
+<p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
+<div class="form-group">
+    <label for="cnh">Carteira de Habilitação</label>
+    <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação">
+    <img src="https://images.noticiasautomotivas.com.br/img/f/cnh-carteira-nacional-habilitacao.jpg" alt="Exemplo de CNH" style="width: 100%; height: auto;" onclick="document.getElementById('cnh').click();">
+</div>
+<div class="form-group">
+    <label for="rg-frente">RG Frente</label>
+    <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente">
+</div>
+<div class="form-group">
+    <label for="rg-verso">RG Verso</label>
+    <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso">
+</div>
+<button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
+<button type="submit" class="btn btn-primary mt-3">Enviar</button>
         </div>
     </form>
 </div>
@@ -198,11 +200,24 @@ alert("{{ erro }}");
         updateProgressBar();
     }
 
+    function validateDocumentsSection() {
+        const rgFrente = document.querySelector('input[name="rg-frente"]').files.length;
+        const rgVerso = document.querySelector('input[name="rg-verso"]').files.length;
+        const cnh = document.querySelector('input[name="cnh"]').files.length;
+        if (cnh === 0 && (rgFrente === 0 || rgVerso === 0)) {
+            alert('Por favor, envie a CNH ou ambos os lados do RG.');
+            return false;
+        }
+        return true;
+    }
+
     document.getElementById('dataForm').addEventListener('submit', function(event) {
-        if (!validateSection(currentSection)) {
+        if (!validateSection(currentSection) || !validateDocumentsSection()) {
             event.preventDefault();
         }
     });
+
+    document.getElementById('section4').addEventListener('change', validateDocumentsSection);
 </script>
 </body>
 </html>
