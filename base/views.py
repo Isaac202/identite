@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from django.http import Http404
+import base64
+from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
 from .utils import agendar_pedido, consultar_status_pedido, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
 from datetime import datetime
@@ -67,17 +69,17 @@ def form(request,slug=None):
         if request.POST["telefone"].strip():
             telefone = request.POST["telefone"].replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
             novo_cliente.telefone = telefone
-        if "rg-frente" in request.FILES:
-            novo_cliente.rg_frente = request.FILES["rg-frente"]
-        if "rg-verso" in request.FILES:
-            novo_cliente.rg_verso = request.FILES["rg-verso"]
-        if "cnh" in request.FILES:
-            novo_cliente.carteira_identidade = request.FILES["cnh"]
+   
         novo_cliente.voucher_id = voucher.id
         pedido, erro = salvar_venda(novo_cliente)
         if pedido is not None:
             novo_cliente.pedido_id = pedido.id
             novo_cliente.save()
+            if "rg-frente" in request.FILES and "rg-verso" in request.FILES and "cnh" in request.FILES:
+                rg_frente = base64.b64encode(request.FILES["rg-frente"].read()).decode('utf-8')
+                rg_verso = base64.b64encode(request.FILES["rg-verso"].read()).decode('utf-8')
+                cnh = base64.b64encode(request.FILES["cnh"].read()).decode('utf-8')
+                salvar_arquivos_cliente.delay(novo_cliente.id, rg_frente, rg_verso, cnh)
             return redirect('gerar_protocolo', pedido=pedido.pedido) # redireciona para a view de agendamento
         else:
             return render(request, 'form.html', {'erro': erro,'slug': slug})
