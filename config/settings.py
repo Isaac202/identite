@@ -123,9 +123,10 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_QUERYSTRING_AUTH = False
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_LOCATION = 'static'
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
 
 
 CELERY_BROKER_URL = config('REDIS_URL')
@@ -184,23 +185,17 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Adicione est
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/painel/'
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
+# Configuração para arquivos estáticos
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
 
-MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
-STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/'
-STATIC_ROOT = BASE_DIR / 'static'  # Adicione esta linha
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Essa linha pode ser opcional, dependendo da sua estrutura
 
-MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
-MEDIA_ROOT = BASE_DIR / 'mediaidentite'
-
-STATIC_URL = '/static/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+# Configuração para arquivos de mídia
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+MEDIA_ROOT = BASE_DIR / 'media'  # Apenas se precisar de uma pasta local para uploads temporários
 
 
 SECRET_KEY_CRYPTO = "CIaj3DovFF1oTy6q50idyZnLcOUxZ67oy5cSO8l3sQM="
