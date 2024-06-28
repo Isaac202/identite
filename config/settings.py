@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'storages',
+    'rest_framework',
 
     'base',
 ]
@@ -177,13 +178,31 @@ LOGGING = {
 }
 
 
-
+APPEND_SLASH = False
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Adicione esta linha
 
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/painel/'
+
+
+MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
 STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/'
+STATIC_ROOT = BASE_DIR / 'static'  # Adicione esta linha
+
 MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
 MEDIA_ROOT = BASE_DIR / 'mediaidentite'
+
+STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+
 SECRET_KEY_CRYPTO = "CIaj3DovFF1oTy6q50idyZnLcOUxZ67oy5cSO8l3sQM="
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

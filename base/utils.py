@@ -2,7 +2,8 @@ import requests
 import json
 from cryptography.fernet import Fernet
 from django.conf import settings
-
+import random
+import string
 from base.models import Pedidos
 
 def encrypt_voucher(voucher_code):
@@ -245,3 +246,7 @@ def consultar_status_pedido(pedido):
             return None, ["JSONDecodeError: A resposta não é um JSON válido"]
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+    
+
+def generate_random_code(length=12):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))

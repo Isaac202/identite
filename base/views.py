@@ -1,13 +1,33 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.http import Http404
 import base64
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
 from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
-from .utils import agendar_pedido, consultar_status_pedido, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
+from .utils import agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
 from datetime import datetime
+from .forms import VoucherForm
+from rest_framework import viewsets
+from rest_framework import viewsets, permissions
+from .models import Voucher, DadosCliente
+from .serializers import VoucherSerializer, DadosClienteSerializer
+
+class VoucherViewSet(viewsets.ModelViewSet):
+    queryset = Voucher.objects.all()
+    serializer_class = VoucherSerializer
+    permission_classes = [permissions.AllowAny]  # Adicione esta linha
+
+class DadosClienteViewSet(viewsets.ModelViewSet):
+    queryset = DadosCliente.objects.all()
+    serializer_class = DadosClienteSerializer
+    permission_classes = [permissions.AllowAny]  # Adicione esta linha
 
 
 
+    
 def check_voucher(request):
     if request.method == 'POST':
         code = request.POST.get('voucher_code')
@@ -168,3 +188,75 @@ def gerar_protocolo_view(request, pedido=None):
         else:
             return render(request, 'protocolo.html', {'pedido': pedido,'erros': erros})
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
+
+
+
+
+
+
+def list_vouchers(request):
+    vouchers = Voucher.objects.all()
+    return render(request, 'home/listar_voucher.html', {'vouchers': vouchers})
+
+def create_voucher(request):
+    if request.method == "POST":
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('list_vouchers')
+    else:
+        form = VoucherForm()
+    return render(request, 'home/create_voucher.html', {'form': form})
+
+@login_required
+def voucher_statistics(request):
+    total_clients = DadosCliente.objects.filter(voucher__isnull=False).distinct().count()
+    active_vouchers = Voucher.objects.filter(is_valid=True).count()
+    inactive_vouchers = Voucher.objects.filter(is_valid=False).count()
+    clients_with_vouchers = DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher')
+
+    context = {
+        'total_clients': total_clients,
+        'active_vouchers': active_vouchers,
+        'inactive_vouchers': inactive_vouchers,
+        'clients_with_vouchers': clients_with_vouchers,
+    }
+
+    return render(request, 'home/index.html', context)
+
+@csrf_exempt
+def create_voucher(request):
+    if request.method == "POST":
+        quantity = int(request.POST.get('quantity', 1))
+        vouchers = []
+        for _ in range(quantity):
+            code = generate_random_code()
+            voucher = Voucher.objects.create(code=code)
+            vouchers.append(voucher)
+        return JsonResponse({'vouchers': [model_to_dict(v) for v in vouchers]}, status=201)
+    return JsonResponse({'error': 'Invalid method'}, status=400)
+
+@csrf_exempt
+def edit_voucher(request, id):
+    voucher = get_object_or_404(Voucher, id=id)
+    if request.method == "POST":
+        print("Linha 228")
+        if voucher.is_valid == True:
+            voucher.is_valid = False
+            voucher.save()
+            return JsonResponse({'voucher': model_to_dict(voucher)}, status=200)
+        else:
+            voucher.is_valid = True
+            voucher.save()
+            return JsonResponse({'voucher': model_to_dict(voucher)}, status=200)
+    else:
+        form = VoucherForm(instance=voucher)
+    return JsonResponse({'form': form.as_p()}, status=400)
+
+@csrf_exempt
+def delete_voucher(request, id):
+    voucher = get_object_or_404(Voucher, id=id)
+    if request.method == "POST":
+        voucher.delete()
+        return JsonResponse({'result': 'OK'}, status=200)
+    return JsonResponse({'error': 'Invalid method'}, status=400)

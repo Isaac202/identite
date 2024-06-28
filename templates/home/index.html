@@ -1,0 +1,171 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block stylesheets %}
+<style>
+  .voucher-code {
+    cursor: pointer;
+  }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-3 col-md-6 col-sm-6">
+    <div class="card card-stats">
+      <div class="card-header card-header-warning card-header-icon">
+        <div class="card-icon">
+          <i class="fa fa-user"></i>
+        </div>
+        <p class="card-category">Clientes com Vouchers</p>
+        <h3 class="card-title">{{ total_clients }}</h3>
+      </div>
+      <div class="card-footer">
+        <div class="stats">
+          <i class="material-icons">update</i> Atualizado agora
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6 col-sm-6">
+    <div class="card card-stats">
+      <div class="card-header card-header-success card-header-icon">
+        <div class="card-icon">
+          <i class="fa fa-check"></i>
+        </div>
+        <p class="card-category">Vouchers Ativos</p>
+        <h3 class="card-title">{{ active_vouchers }}</h3>
+      </div>
+      <div class="card-footer">
+        <div class="stats">
+          <i class="material-icons">update</i> Atualizado agora
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6 col-sm-6">
+    <div class="card card-stats">
+      <div class="card-header card-header-danger card-header-icon">
+        <div class="card-icon">
+          <i class="fa fa-times"></i>
+        </div>
+        <p class="card-category">Vouchers Inativos</p>
+        <h3 class="card-title">{{ inactive_vouchers }}</h3>
+      </div>
+      <div class="card-footer">
+        <div class="stats">
+          <i class="material-icons">update</i> Atualizado agora
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header card-header-primary">
+        <h4 class="card-title">Clientes com Vouchers</h4>
+        <p class="card-category">Lista de clientes que utilizaram vouchers</p>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
+          <table class="table">
+            <thead class="text-primary">
+              <th>ID</th>
+              <th>Nome Completo</th>
+              <th>Email</th>
+              <th>Código do Voucher</th>
+              <th>Voucher Ativo</th>
+            </thead>
+            <tbody id="voucher-table-body">
+              {% for cliente in clients_with_vouchers %}
+              <tr data-id="{{ cliente.voucher.id }}">
+                <td>{{ cliente.id }}</td>
+                <td>{{ cliente.nome_completo }}</td>
+                <td>{{ cliente.email }}</td>
+                <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
+                <td>
+                  <input type="checkbox" class="toggle-validity" data-id="{{ cliente.voucher.id }}" {% if cliente.voucher.is_valid %}checked{% endif %}>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie('csrftoken');
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+
+    function updateVoucherRow(voucher) {
+      const row = document.querySelector(`tr[data-id="${voucher.id}"]`);
+      row.querySelector('.toggle-validity').checked = voucher.is_valid;
+    }
+
+    function attachEventListeners(row) {
+      row.querySelector('.voucher-code').addEventListener('click', function() {
+        const code = this.innerText;
+        navigator.clipboard.writeText(code).then(() => {
+          alert('Código copiado: ' + code);
+        }).catch(err => {
+          console.error('Erro ao copiar o código: ', err);
+        });
+      });
+
+      row.querySelector('.toggle-validity').addEventListener('change', function() {
+        const voucherId = this.getAttribute('data-id');
+        const isValid = this.checked;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrftoken);
+        formData.append('is_valid', isValid);
+        fetch(`/edit_voucher/${voucherId}/`, {
+          method: 'POST',
+          body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.voucher) {
+            updateVoucherRow(data.voucher);
+          }
+        });
+      });
+    }
+
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      document.querySelectorAll('#voucher-table-body tr').forEach(row => {
+        const code = row.cells[3].innerText.toLowerCase();
+        row.style.display = code.includes(query) ? '' : 'none';
+      });
+    });
+
+    document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
+  });
+</script>
+{% endblock content %}
+
+{% block javascripts %}{% endblock javascripts %}

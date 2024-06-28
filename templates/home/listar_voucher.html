@@ -1,0 +1,201 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}UI Tables{% endblock %}
+
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+<button id="AddVoucherModalBTN" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#AddVoucherModal">
+  Adicionar Voucher
+</button>
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header card-header-primary">
+        <h4 class="card-title ">Tabela de Vouchers</h4>
+        <p class="card-category">Aqui estão todos os vouchers cadastrados</p>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
+          <table class="table">
+            <thead class="text-primary">
+              <th>ID</th>
+              <th>Código</th>
+              <th>É válido</th>
+              <th>Excluir</th>
+            </thead>
+            <tbody id="voucher-table-body">
+              {% for voucher in vouchers %}
+              <tr data-id="{{ voucher.id }}">
+                <td>{{ voucher.id }}</td>
+                <td style="cursor: pointer;" class="voucher-code">{{ voucher.code }}</td>
+                <td><input type="checkbox" class="toggle-validity" data-id="{{ voucher.id }}" {% if voucher.is_valid %}checked{% endif %}></td>
+                <td>
+                  <i class="fa fa-times delete-icon" data-id="{{ voucher.id }}"></i>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Adicionar Voucher -->
+<div class="modal fade" id="AddVoucherModal" tabindex="-1" role="dialog" aria-labelledby="addVoucherModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addVoucherModalLabel">Adicionar Voucher</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- O conteúdo do modal será carregado aqui -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie('csrftoken');
+
+  function generateFormHtml() {
+    return `
+      <form id="voucher-form" method="post">
+        <input type="hidden" name="csrfmiddlewaretoken" value="${csrftoken}">
+        <div class="form-group">
+          <label for="quantity">Quantidade</label>
+          <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </form>
+    `;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const voucherTableBody = document.getElementById('voucher-table-body');
+    const searchInput = document.getElementById('search-input');
+
+    function addVoucherRow(voucher) {
+      const newRow = document.createElement('tr');
+      newRow.setAttribute('data-id', voucher.id);
+      newRow.innerHTML = `
+        <td>${voucher.id}</td>
+        <td class="voucher-code" style="cursor: pointer;">${voucher.code}</td>
+        <td><input type="checkbox" class="toggle-validity" data-id="${voucher.id}" ${voucher.is_valid ? 'checked' : ''}></td>
+        <td>
+          <i class="fa fa-times delete-icon" data-id="${voucher.id}"></i>
+        </td>
+      `;
+      voucherTableBody.appendChild(newRow);
+      attachEventListeners(newRow);
+    }
+
+    function updateVoucherRow(voucher) {
+      const row = document.querySelector(`tr[data-id="${voucher.id}"]`);
+      row.querySelector('.toggle-validity').checked = voucher.is_valid;
+    }
+
+    function attachEventListeners(row) {
+      row.querySelector('.voucher-code').addEventListener('click', function() {
+        const code = this.innerText;
+        navigator.clipboard.writeText(code).then(() => {
+          alert('Código copiado: ' + code);
+        }).catch(err => {
+          console.error('Erro ao copiar o código: ', err);
+        });
+      });
+
+      row.querySelector('.toggle-validity').addEventListener('change', function() {
+        const voucherId = this.getAttribute('data-id');
+        const isValid = this.checked;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrftoken);
+        formData.append('is_valid', isValid);
+        fetch(`/edit_voucher/${voucherId}/`, {
+          method: 'POST',
+          body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.voucher) {
+            updateVoucherRow(data.voucher);
+          }
+        });
+      });
+
+      row.querySelector('.delete-icon').addEventListener('click', function() {
+        const voucherId = this.getAttribute('data-id');
+        fetch(`/delete_voucher/${voucherId}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
+        })
+        .then(response => {
+          if (response.ok) {
+            row.remove();
+          }
+        });
+      });
+    }
+
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      document.querySelectorAll('#voucher-table-body tr').forEach(row => {
+        const code = row.cells[1].innerText.toLowerCase();
+        row.style.display = code.includes(query) ? '' : 'none';
+      });
+    });
+
+    document.getElementById('AddVoucherModalBTN').addEventListener('click', function() {
+      const formHtml = generateFormHtml();
+      document.querySelector('#AddVoucherModal .modal-body').innerHTML = formHtml;
+      $('#AddVoucherModal').modal('show');
+      document.getElementById('voucher-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const quantity = formData.get('quantity');
+        fetch('/create_voucher/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
+          body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.vouchers) {
+            data.vouchers.forEach(voucher => addVoucherRow(voucher));
+            $('#AddVoucherModal').modal('hide');
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
+  });
+</script>
+{% endblock content %}
+
+{% block javascripts %}{% endblock javascripts %}

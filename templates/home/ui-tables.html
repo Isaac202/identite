@@ -1,0 +1,50 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} UI Tables {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+      <div class="card">
+          <div class="card-header card-header-primary">
+              <h4 class="card-title ">Tabela de Clínicas</h4>
+              <p class="card-category"> Aqui estão todas as clínicas cadastradas</p>
+          </div>
+          <div class="card-body">
+              <div class="table-responsive">
+                  <table class="table">
+                      <thead class=" text-primary">
+                          <th>ID</th>
+                          <th>Nome</th>
+                          <th>CEP</th>
+                          <th>Endereço</th>
+                          <th>Telefone</th>
+                          <th>Email</th>
+                          <!-- Adicione mais cabeçalhos de coluna conforme necessário -->
+                      </thead>
+                      <tbody>
+                          {% for clinica in clinicas %}
+                          <tr>
+                              <td>{{ clinica.id }}</td>
+                              <td>{{ clinica.nome }}</td>
+                              <td>{{ clinica.cep }}</td>
+                              <td>{{ clinica.endereco }}</td>
+                              <td>{{ clinica.telefone }}</td>
+                              <td>{{ clinica.email }}</td>
+                              <!-- Adicione mais células conforme necessário -->
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

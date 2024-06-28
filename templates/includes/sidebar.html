@@ -1,0 +1,35 @@
+    <div class="sidebar" data-color="purple" data-background-color="white" data-image="/static/assets/img/sidebar-1.jpg">
+      <div class="logo">
+        <a target="_blank" rel="noopener noreferrer" 
+           href="https://appseed.us/admin-dashboards/django-dashboard-material" class="simple-text logo-normal">
+          CONSULTI
+        </a>
+      </div>
+      <div class="sidebar-wrapper">
+        <ul class="nav">
+        {% if request.user.is_authenticated %}
+
+          <li class="nav-item {% if 'index' in segment %} active {% endif %}">
+            <a class="nav-link" href="{% url 'painel' %}">
+              <i class="material-icons">dashboard</i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item {% url 'vouchers' %}">
+            <a class="nav-link" href="{% url 'vouchers' %}">
+              <i class="fa fa-hospital-o"></i>
+              <p>Vouchers</p>
+            </a>
+          </li>
+          <li style="cursor: pointer;" class="nav-item ">
+            <form style="cursor: pointer;" id="logout-form" method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item">Log out</button>
+          </form>
+          </li>            
+
+        {% endif %}
+        </ul>
+      </div>
+
+    </div>

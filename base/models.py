@@ -1,9 +1,16 @@
 from django.db import models
 
+class BaseModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
 def upload_image_book(instance, filename):
     return f"documentos_identite/{instance.nome_completo}-{filename}"
 
-class Voucher(models.Model):
+class Voucher(BaseModel):
     code = models.CharField(max_length=255, unique=True)  # Aumente o tamanho para armazenar o voucher encriptado
     is_valid = models.BooleanField(default=True)
 
@@ -12,7 +19,7 @@ class Voucher(models.Model):
 
 
 
-class Pedidos(models.Model):
+class Pedidos(BaseModel):
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
     hashVenda = models.CharField(max_length=255)
@@ -21,7 +28,7 @@ class Pedidos(models.Model):
         return f'Numero do Pedido:{self.pedido}'
 
 
-class DadosCliente(models.Model):
+class DadosCliente(BaseModel):
     nome_completo = models.CharField(max_length=255)
     nome_fantasia = models.CharField(max_length=255)
     razao_social = models.CharField(max_length=255)
@@ -50,7 +57,7 @@ class DadosCliente(models.Model):
     def __str__(self):
         return f'{self.nome_completo}'
 
-class Agendamento(models.Model):
+class Agendamento(BaseModel):
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     data = models.CharField(max_length=255)
     hora = models.CharField(max_length=255)
@@ -61,5 +68,5 @@ class Agendamento(models.Model):
 
 
 
-class Slots(models.Model):
+class Slots(BaseModel):
     hashSlot = models.CharField(max_length=255, unique=True)
