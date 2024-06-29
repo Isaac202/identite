@@ -38,6 +38,9 @@
         </form>
         <div class="table-responsive">
           <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
+          <button id="download-btn" type="button" class="btn btn-primary">
+            Baixar Excel
+          </button>
           <table class="table">
             <thead class="text-primary">
               <th>ID</th>
@@ -215,6 +218,25 @@
 
     document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
   });
+</script>
+<script src="https://unpkg.com/file-saver"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/tableexport.jquery.plugin/tableexport.min.js"></script>
+<script>
+ document.getElementById('download-btn').addEventListener('click', function() {
+  let table = document.getElementsByClassName('table')[0];
+  let wb = XLSX.utils.table_to_book(table, {sheet:"Sheet JS"});
+  let wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
+  saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'dados.xlsx');
+});
+
+function s2ab(s) {
+  var buf = new ArrayBuffer(s.length);
+  var view = new Uint8Array(buf);
+  for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+  return buf;
+}
 </script>
 {% endblock content %}
 
