@@ -71,13 +71,33 @@
         <p class="card-category">Lista de clientes que utilizaram vouchers</p>
       </div>
       <div class="card-body">
+        <form style="max-width: 180px;"id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
+          {% for field in filter.form %}
+            <div class="form-group">
+              {% if field.name == "start_date" %}
+                <label for="{{ field.auto_id }}">Data de início:</label>
+              {% elif field.name == "end_date" %}
+                <label for="{{ field.auto_id }}">Data de término:</label>
+              {% else %}
+                <label for="{{ field.auto_id }}">{{ field.label }}</label>
+              {% endif %}
+              {% if field.name == "start_date" or field.name == "end_date" %}
+                <input type="date" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
+              {% else %}
+                <input type="{{ field.field.widget.input_type }}" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
+              {% endif %}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+        </form>
         <div class="table-responsive">
           <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
           <table class="table">
             <thead class="text-primary">
               <th>ID</th>
               <th>Nome Completo</th>
-              <th>Email</th>
+              <th>Protocolo</th>
+              <th>CNPJ</th>
               <th>Código do Voucher</th>
               <th>Voucher Ativo</th>
             </thead>
@@ -86,7 +106,8 @@
               <tr data-id="{{ cliente.voucher.id }}">
                 <td>{{ cliente.id }}</td>
                 <td>{{ cliente.nome_completo }}</td>
-                <td>{{ cliente.email }}</td>
+                <td>{{ cliente.pedido.protocolo }}</td>
+                <td>{{ cliente.cnpj }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
                 <td>
                   <input type="checkbox" class="toggle-validity" data-id="{{ cliente.voucher.id }}" {% if cliente.voucher.is_valid %}checked{% endif %}>

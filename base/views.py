@@ -5,11 +5,13 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
+from base.filters import DadosClienteFilter, VoucherFilter
 from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
 from .utils import agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
 from datetime import datetime
 from .forms import VoucherForm
+from django.utils.dateparse import parse_date
 from rest_framework import viewsets
 from rest_framework import viewsets, permissions
 from .models import Voucher, DadosCliente
@@ -192,12 +194,13 @@ def gerar_protocolo_view(request, pedido=None):
 
 
 
-
-
 def list_vouchers(request):
-    vouchers = Voucher.objects.all()
-    return render(request, 'home/listar_voucher.html', {'vouchers': vouchers})
+    voucher_list = Voucher.objects.all()
+    voucher_filter = VoucherFilter(request.GET, queryset=voucher_list)
+    return render(request, 'home/listar_voucher.html', {'filter': voucher_filter})
 
+
+@login_required
 def create_voucher(request):
     if request.method == "POST":
         form = VoucherForm(request.POST)
@@ -210,12 +213,15 @@ def create_voucher(request):
 
 @login_required
 def voucher_statistics(request):
-    total_clients = DadosCliente.objects.filter(voucher__isnull=False).distinct().count()
-    active_vouchers = Voucher.objects.filter(is_valid=True).count()
-    inactive_vouchers = Voucher.objects.filter(is_valid=False).count()
-    clients_with_vouchers = DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher')
+    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher'))
+    clients_with_vouchers = dados_cliente_filter.qs
+    all_voucher = Voucher.objects.all()
+    total_clients = clients_with_vouchers.distinct().count()
+    active_vouchers = all_voucher.filter(is_valid=True).count()
+    inactive_vouchers = all_voucher.filter(is_valid=False).count()
 
     context = {
+        'filter': dados_cliente_filter,
         'total_clients': total_clients,
         'active_vouchers': active_vouchers,
         'inactive_vouchers': inactive_vouchers,
@@ -224,6 +230,8 @@ def voucher_statistics(request):
 
     return render(request, 'home/index.html', context)
 
+
+@login_required
 @csrf_exempt
 def create_voucher(request):
     if request.method == "POST":
@@ -236,6 +244,7 @@ def create_voucher(request):
         return JsonResponse({'vouchers': [model_to_dict(v) for v in vouchers]}, status=201)
     return JsonResponse({'error': 'Invalid method'}, status=400)
 
+@login_required
 @csrf_exempt
 def edit_voucher(request, id):
     voucher = get_object_or_404(Voucher, id=id)
@@ -253,6 +262,7 @@ def edit_voucher(request, id):
         form = VoucherForm(instance=voucher)
     return JsonResponse({'form': form.as_p()}, status=400)
 
+@login_required
 @csrf_exempt
 def delete_voucher(request, id):
     voucher = get_object_or_404(Voucher, id=id)
