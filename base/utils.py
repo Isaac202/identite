@@ -20,7 +20,7 @@ url = settings.URL_API
 
 def salvar_venda(cliente):
     endpoint = f'{url}/api/GarAPIs/'
-    apiKey = "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502"
+    apiKey = "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1"
     HashVendedor=  "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     HashTabela = "86d7f05b-a75d-4e1f-b4a2-3558424e678a"
     FormaPagamento = 11
@@ -82,7 +82,7 @@ def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
     url = f'{url}/api/GarAPIs/'  # Substitua pela URL da API que gera os protocolos
     headers = {"Content-Type": "application/json"}
     payload = {
-        "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+        "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
         "Pedido": pedido,
         "CNPJ": cnpj,
         "CPF": cpf,
@@ -112,7 +112,7 @@ def obter_disponibilidade_agenda():
     url = f'{url}/api/GarAPIs/ObterDisponibilidadeAgenda'
     headers = {"Content-Type": "application/json"}
     payload = {
-       "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+       "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
         "DataInicial": "2024-06-27",
         "DataFinal": "2024-07-29",
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
@@ -134,7 +134,7 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
     url = f'{url}/api/GarAPIs/AgendarPedido'
     headers = {"Content-Type": "application/json"}
     payload = { 
-        "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+        "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
         "HashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157",
         "DataInicial": f"{data} {hora_inicial}",
         "DataFinal": f"{data} {hora_final}",
@@ -157,7 +157,7 @@ def consultar_status_pedido(pedido):
     url = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
     headers = {"Content-Type": "application/json"}
     payload = { 
-                "apiKey": "e5aaffae75484e138cd1685e2f486b54452edf0e867a4fda8e7bdd8f16b92502",
+                "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
                 "Pedido": pedido,
                 "Protocolo": ""
     }
