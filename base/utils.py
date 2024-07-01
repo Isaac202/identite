@@ -22,7 +22,7 @@ def salvar_venda(cliente):
     endpoint = f'{url}/api/GarAPIs/'
     apiKey = "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1"
     HashVendedor=  "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
-    HashTabela = "86d7f05b-a75d-4e1f-b4a2-3558424e678a"
+    HashTabela = "bb51ab54-c501-4a70-a36c-7dfde8da8b7c"
     FormaPagamento = 11
     CodigoVoucher = cliente.voucher.code
 
@@ -79,7 +79,7 @@ def salvar_venda(cliente):
 
 
 def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
-    url = f'{url}/api/GarAPIs/'  # Substitua pela URL da API que gera os protocolos
+    endpoint = f'{url}/api/GarAPIs/'  # Substitua pela URL da API que gera os protocolos
     headers = {"Content-Type": "application/json"}
     payload = {
         "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
@@ -90,7 +90,7 @@ def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
         "IsPossuiCNH": is_possui_cnh
     }
 
-    response = requests.post(f'{url}EmitirProtocolo', data=json.dumps(payload), headers=headers)
+    response = requests.post(f'{endpoint}EmitirProtocolo', data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:
             response_data = response.json()
@@ -109,7 +109,7 @@ def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
 
 
 def obter_disponibilidade_agenda():
-    url = f'{url}/api/GarAPIs/ObterDisponibilidadeAgenda'
+    endpoint = f'{url}/api/GarAPIs/ObterDisponibilidadeAgenda'
     headers = {"Content-Type": "application/json"}
     payload = {
        "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
@@ -118,7 +118,7 @@ def obter_disponibilidade_agenda():
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     }
 
-    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    response = requests.post(endpoint, data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:
             response_data = response.json()
@@ -131,7 +131,7 @@ def obter_disponibilidade_agenda():
 
 
 def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
-    url = f'{url}/api/GarAPIs/AgendarPedido'
+    endpoint = f'{url}/api/GarAPIs/AgendarPedido'
     headers = {"Content-Type": "application/json"}
     payload = { 
         "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
@@ -141,7 +141,7 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
         "HashVenda": hash_venda,
         "IsCliente":"1"
     }
-    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    response = requests.post(endpoint, data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:
             response_data = response.json()
@@ -154,14 +154,14 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
 
 
 def consultar_status_pedido(pedido):
-    url = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
+    endpont = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
     headers = {"Content-Type": "application/json"}
     payload = { 
                 "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
                 "Pedido": pedido,
                 "Protocolo": ""
     }
-    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    response = requests.post(endpont, data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:
             response_data = response.json()
