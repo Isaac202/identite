@@ -209,6 +209,7 @@
         .then(response => response.json())
         .then(data => {
           if (data.vouchers) {
+            alert(`Vouchers criados com sucesso: ${quantity}`);
             data.vouchers.forEach(voucher => addVoucherRow(voucher));
             $('#AddVoucherModal').modal('hide');
           }
