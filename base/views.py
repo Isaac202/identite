@@ -122,8 +122,7 @@ def agendar_videoconferencia(request, pedido=None):
         data, hora_inicial, hora_final = slot.split(';')
         print(data, hora_inicial, hora_final)   
         # Converta a data e a hora para o formato correto
-        data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S").date()
-    
+        data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S%z").date()
         get_pedido = Pedidos.objects.get(pedido=pedido)
         hash_venda, error = consultar_status_pedido(pedido)
         if hash_venda["StatusPedido"] != 'Protocolo Gerado':
