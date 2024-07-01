@@ -36,7 +36,7 @@ def check_voucher(request):
   
         try:
             voucher = Voucher.objects.get(code=code, is_valid=True)
-            print(voucher)
+            
             return redirect('form', slug=code)
         except Voucher.DoesNotExist:
             return render(request, 'invalid.html')
@@ -117,10 +117,9 @@ def form(request,slug=None):
 def agendar_videoconferencia(request, pedido=None):
     if request.method == 'POST':
         # Aqui você pode processar os dados do POST. Por exemplo, você pode salvar a data e a hora escolhidas pelo usuário.
-        print(request.POST)
+       
         slot = request.POST['slot']
         data, hora_inicial, hora_final = slot.split(';')
-        print(data, hora_inicial, hora_final)   
         # Converta a data e a hora para o formato correto
         data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S%z").date()
         get_pedido = Pedidos.objects.get(pedido=pedido)
@@ -150,7 +149,7 @@ def agendar_videoconferencia(request, pedido=None):
     # Se o método não for POST, chama a função obter_slots_agenda e passa os dados retornados para o template.
       # Substitua pelo hashSlot apropriado.
     slots_agenda, erro = obter_disponibilidade_agenda()
-    print(slots_agenda)
+
     if erro:
         return render(request, 'gerar_protocolo_view.html', {'erro': erro})
 
@@ -170,14 +169,13 @@ def gerar_protocolo_view(request, pedido=None):
         cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")  # Remove a máscara do CNPJ
         cpf = request.POST.get('cpf').replace(".", "").replace("-", "")  # Remove a máscara do CPF
         data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')  # Altera o formato da data
-        print(data_nascimento)
+        
         # Pega os outros dados do objeto dados_cliente
         pedido = dados_cliente.pedido.pedido
         is_possui_cnh = True if dados_cliente.carteira_identidade else False   
 
         erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
-        print(erros,"Erros")
-        print(protocolo,"Protocolo")
+
         
         status_pedido = consultar_status_pedido(pedido)
         if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
@@ -248,7 +246,7 @@ def create_voucher(request):
 def edit_voucher(request, id):
     voucher = get_object_or_404(Voucher, id=id)
     if request.method == "POST":
-        print("Linha 228")
+        
         if voucher.is_valid == True:
             voucher.is_valid = False
             voucher.save()
