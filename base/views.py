@@ -8,7 +8,7 @@ from django.forms.models import model_to_dict
 from base.filters import DadosClienteFilter, VoucherFilter
 from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
-from .utils import agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
+from .utils import adicionar_protocolo_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
 from datetime import datetime
 from .forms import VoucherForm
 from django.utils.dateparse import parse_date
@@ -127,6 +127,7 @@ def agendar_videoconferencia(request, pedido=None):
         if hash_venda["StatusPedido"] != 'Protocolo Gerado':
             error = "O protocolo ainda não foi gerado."
             return render(request, 'protocolo.html', {'pedido': pedido, 'erro_protocolo': error})
+        adicionar_protocolo_no_pedido(get_pedido, hash_venda['Protocolo'])
         # Agende o pedido
         response_data, errors = agendar_pedido(hash_venda["HashVenda"], data, hora_inicial, hora_final)
         if errors:
@@ -179,6 +180,7 @@ def gerar_protocolo_view(request, pedido=None):
         
         status_pedido = consultar_status_pedido(pedido)
         if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
+            
             return redirect('agendar_videoconferencia', pedido=pedido)
         if erros:
             return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
