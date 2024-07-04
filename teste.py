@@ -32,7 +32,7 @@ def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
     
 def consultar_status_pedido(pedido):
-    url = 'https://apiconsulti.gestaoar.com.br/Realize2/api/GarAPIs/ConsultaPedidoProtocolo'
+    url = 'https://apiconsulti.gestaoar.com.br/Agilize/api/GarAPIs/ConsultaPedidoProtocolo'
     headers = {"Content-Type": "application/json"}
     payload = { 
                 "apiKey": "cda7ee3929fd4e5d96c26fe4430a27bd7d7c575176cc497294d09b2a446cc3c1",
@@ -49,7 +49,7 @@ def consultar_status_pedido(pedido):
             return None, ["JSONDecodeError: A resposta não é um JSON válido"]
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
-hash_venda, error = consultar_status_pedido('62405')
+hash_venda, error = consultar_status_pedido('62527')
 
 if hash_venda["StatusPedido"] != 'Protocolo Gerado':
     print("O protocolo ainda não foi gerado.")
