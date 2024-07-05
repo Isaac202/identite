@@ -58,7 +58,7 @@ def salvar_venda(cliente):
             }
         ]
     }
-
+    print(payload)
     response = requests.post(f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
     if response.status_code == 200 and response.text.strip():
         try:
@@ -179,7 +179,24 @@ def generate_random_code(length=12):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
-def adicionar_protocolo_no_pedido(pedido, protocolo):
+def adicionar_protocolo_e_hashvenda_no_pedido(pedido, protocolo,hash_venda):
     # Adicione o protocolo ao pedido aqui
     pedido.protocolo = protocolo
+    pedido.hashVenda = hash_venda
     pedido.save()
+
+
+
+def verifica_se_pode_videoconferecias(cliente):
+    # Verifique se o pedido pode ser videoconferido
+    endpoint = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "apiKey": API_KEY,
+        "CPF": cliente.cpf
+    }
+    response = requests.post(endpoint, data=json.dumps(payload), headers=headers)
+    data = response.json()
+    if not data.get('IsOk', True) and not cliente.carteira_habilitacao:
+        return False
+    return True

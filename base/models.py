@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Max
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -10,8 +11,21 @@ class BaseModel(models.Model):
 def upload_image_book(instance, filename):
     return f"documentos_identite/{instance.nome_completo}-{filename}"
 
+class Lote(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    numero = models.IntegerField(default=1, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            max_numero = Lote.objects.all().aggregate(Max('numero'))['numero__max']
+            if max_numero is not None:
+                self.numero = max_numero + 1
+        super().save(*args, **kwargs)
+
 class Voucher(BaseModel):
     code = models.CharField(max_length=255, unique=True)  # Aumente o tamanho para armazenar o voucher encriptado
+    lote = models.ForeignKey(Lote, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
 
     def __str__(self):
@@ -49,7 +63,7 @@ class DadosCliente(BaseModel):
         upload_to=upload_image_book, blank=True, null=True)
     rg_verso = models.ImageField(
         upload_to=upload_image_book, blank=True, null=True)
-    carteira_identidade = models.ImageField(
+    carteira_habilitacao = models.ImageField(
         upload_to=upload_image_book, blank=True, null=True)
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)

@@ -8,15 +8,36 @@ from django.forms.models import model_to_dict
 from base.filters import DadosClienteFilter, VoucherFilter
 from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
-from .utils import adicionar_protocolo_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda
+from .utils import adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
 from datetime import datetime
 from .forms import VoucherForm
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets
 from rest_framework import viewsets, permissions
+from django.views.decorators.http import require_POST
 from .models import Voucher, DadosCliente
 from .serializers import VoucherSerializer, DadosClienteSerializer
+from django.http import JsonResponse
+from .models import Voucher, Lote
 
+API_KEY = 'e9f1c3b7d2f44a3294d3b1e3429f6a75'
+
+@csrf_exempt
+@require_POST
+def generate_vouchers(request):
+    api_key = request.headers.get('APIKEY')
+    
+    if api_key != API_KEY:
+        return JsonResponse({'error': 'Invalid API Key'}, status=403)
+
+    lote = Lote.objects.create()
+    vouchers = []
+    for _ in range(1000):
+        code = generate_random_code()
+        voucher = Voucher.objects.create(code=code, lote=lote)
+        vouchers.append(voucher)
+
+    return JsonResponse({'lote': lote.id, 'vouchers': [model_to_dict(v) for v in vouchers]}, status=201)
 class VoucherViewSet(viewsets.ModelViewSet):
     queryset = Voucher.objects.all()
     serializer_class = VoucherSerializer
@@ -115,6 +136,10 @@ def form(request,slug=None):
 
 
 def agendar_videoconferencia(request, pedido=None):
+    cliente = DadosCliente.objects.get(pedido__pedido=pedido)
+    esta_ok = verifica_se_pode_videoconferecias(cliente)
+    if not esta_ok:
+        return render(request, 'entre_contato.html')
     if request.method == 'POST':
         # Aqui você pode processar os dados do POST. Por exemplo, você pode salvar a data e a hora escolhidas pelo usuário.
        
@@ -127,7 +152,7 @@ def agendar_videoconferencia(request, pedido=None):
         if hash_venda["StatusPedido"] != 'Protocolo Gerado':
             error = "O protocolo ainda não foi gerado."
             return render(request, 'protocolo.html', {'pedido': pedido, 'erro_protocolo': error})
-        adicionar_protocolo_no_pedido(get_pedido, hash_venda['Protocolo'])
+        adicionar_protocolo_e_hashvenda_no_pedido(get_pedido, hash_venda['Protocolo'], hash_venda['HashVenda'])
         # Agende o pedido
         response_data, errors = agendar_pedido(hash_venda["HashVenda"], data, hora_inicial, hora_final)
         if errors:
@@ -173,20 +198,25 @@ def gerar_protocolo_view(request, pedido=None):
         
         # Pega os outros dados do objeto dados_cliente
         pedido = dados_cliente.pedido.pedido
-        is_possui_cnh = True if dados_cliente.carteira_identidade else False   
+        is_possui_cnh = True if dados_cliente.carteira_habilitacao else False   
 
         erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
 
         
         status_pedido = consultar_status_pedido(pedido)
-        if "Protocolo emitido com sucesso" or 'Protocolo já emitido' in erros:
-            
+        if any('Protocolo emitido com sucesso' in erro['ErrorDescription'] for erro in erros):
+            print("Linha 208")
+            print(erros)
             return redirect('agendar_videoconferencia', pedido=pedido)
+        print("Linha 210", erros)
         if erros:
+            print("Linha 212")
             return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
         if protocolo is not None:
+            print("Linha 215")
             return render(request, 'agendar_videoconferencia.html', {'pedido': pedido})
         else:
+            print("Linha 219")
             return render(request, 'protocolo.html', {'pedido': pedido,'erros': erros})
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
 

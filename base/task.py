@@ -26,7 +26,7 @@ def salvar_arquivos_cliente(id_cliente, rg_frente_b64=None, rg_verso_b64=None, c
         
         if cnh_b64:
             cnh = base64.b64decode(cnh_b64)
-            cliente.carteira_identidade.save('cnh.jpg', ContentFile(cnh))
+            cliente.carteira_habilitacao.save('cnh.jpg', ContentFile(cnh))
             logger.debug("CNH salvo para o cliente %s", id_cliente)
         
         cliente.save()

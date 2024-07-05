@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia,check_voucher, create_voucher, delete_voucher, edit_voucher, form,agradecimento_orientacao,gerar_protocolo_view, list_vouchers, voucher_statistics
+from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia,check_voucher, create_voucher, delete_voucher, edit_voucher, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, list_vouchers, voucher_statistics
 from django.contrib.auth import views as auth_views
 
 router = DefaultRouter()
@@ -13,6 +13,7 @@ urlpatterns = [
     path('form/<slug:slug>/', form, name='form'),
     path('api/', include(router.urls)),
     path('vouchers/', list_vouchers, name='vouchers'),
+    path('generate_vouchers/', generate_vouchers, name='generate_vouchers'),
     path('agradecimento_orientacao/', agradecimento_orientacao, name='agradecimento_orientacao'),
     path('agendar_videoconferencia/<int:pedido>/', agendar_videoconferencia, name='agendar_videoconferencia'),
     path('gerar_protocolo/<str:pedido>/', gerar_protocolo_view, name='gerar_protocolo'),

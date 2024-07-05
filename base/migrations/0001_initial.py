@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                 ('data_nacimento', models.CharField(max_length=100)),
                 ('rg_frente', models.ImageField(blank=True, null=True, upload_to=base.models.upload_image_book)),
                 ('rg_verso', models.ImageField(blank=True, null=True, upload_to=base.models.upload_image_book)),
-                ('carteira_identidade', models.ImageField(blank=True, null=True, upload_to=base.models.upload_image_book)),
+                ('carteira_habilitacao', models.ImageField(blank=True, null=True, upload_to=base.models.upload_image_book)),
                 ('pedido', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.pedidos')),
                 ('voucher', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.voucher')),
             ],
