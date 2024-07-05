@@ -133,7 +133,7 @@ def obter_disponibilidade_agenda():
 
 
 def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
-    endpoint = f'{url}/api/GarAPIs/AgendarPedido'
+    endpoint = f'{url}/api/GarAPIs/Agendamento'
     headers = {"Content-Type": "application/json"}
     payload = { 
         "apiKey": API_KEY,
