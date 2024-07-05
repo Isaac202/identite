@@ -205,18 +205,14 @@ def gerar_protocolo_view(request, pedido=None):
         
         status_pedido = consultar_status_pedido(pedido)
         if any('Protocolo emitido com sucesso' in erro['ErrorDescription'] for erro in erros):
-            print("Linha 208")
-            print(erros)
+            
             return redirect('agendar_videoconferencia', pedido=pedido)
-        print("Linha 210", erros)
+        
         if erros:
-            print("Linha 212")
             return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
         if protocolo is not None:
-            print("Linha 215")
             return render(request, 'agendar_videoconferencia.html', {'pedido': pedido})
         else:
-            print("Linha 219")
             return render(request, 'protocolo.html', {'pedido': pedido,'erros': erros})
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
 

@@ -29,7 +29,6 @@ def salvar_venda(cliente):
     CodigoVoucher = cliente.voucher.code
 
     headers = {'Content-Type': 'application/json'}
-    print(cliente.telefone[0:2],cliente.telefone[2:])
     payload = {
         "apiKey": apiKey,
         "HashVendedor": HashVendedor,
@@ -58,7 +57,6 @@ def salvar_venda(cliente):
             }
         ]
     }
-    print(payload)
     response = requests.post(f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
     if response.status_code == 200 and response.text.strip():
         try:
@@ -96,7 +94,6 @@ def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
     if response.status_code == 200:
         try:
             response_data = response.json()
-            print(response_data)
             if 'ErrorCode' in response_data:
                 erros = [erro['ErrorDescription'] for erro in response_data if 'ErrorDescription' in erro]
                 return None, erros
