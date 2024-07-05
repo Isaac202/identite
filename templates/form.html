@@ -218,5 +218,24 @@ alert("{{ erro }}");
 
     document.getElementById('section4').addEventListener('change', validateDocumentsSection);
 </script>
+<script>
+    $(document).ready(function(){
+        $('#cnpj').change(function(){
+            var cnpj = $(this).val().replace(/[^0-9]/g, ''); // Remove non-numeric characters
+            if (cnpj.length == 14) {
+                $.ajax({
+                    url: '{% url "get_empresa_data" %}',
+                    type: 'GET',
+                    data: {cnpj: cnpj},
+                    success: function(data) {
+                        $('input[name="nomeRazaoSocial"]').val(data.razao);
+                        $('input[name="nomeFantasia"]').val(data.fantasia);
+                        $('input[name="cep"]').val(data.cep);
+                    }
+                });
+            }
+        });
+    });
+</script>
 </body>
 </html>

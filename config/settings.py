@@ -133,6 +133,7 @@ AWS_LOCATION = 'static'
 
 CELERY_BROKER_URL = config('REDIS_URL')
 CELERY_RESULT_BACKEND = config('REDIS_URL')
+CPFCNPJ = config('CPFCNPJ')
 
 # settings.py
 

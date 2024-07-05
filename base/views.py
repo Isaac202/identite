@@ -19,8 +19,29 @@ from .models import Voucher, DadosCliente
 from .serializers import VoucherSerializer, DadosClienteSerializer
 from django.http import JsonResponse
 from .models import Voucher, Lote
+import requests
+from django.conf import settings
+
+
 
 API_KEY = 'e9f1c3b7d2f44a3294d3b1e3429f6a75'
+
+
+def get_empresa_data(request):
+    cnpj = request.GET.get('cnpj', None)
+    CPFCNPJ_API_KEY = settings.CPFCNPJ
+    if cnpj and len(cnpj) == 14:
+        response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
+        if response.status_code == 200:
+            data = response.json()
+            return JsonResponse({
+                'razao': data.get('razao'),
+                'fantasia': data.get('fantasia'),
+                'cep': data.get('matrizEndereco', {}).get('cep'),
+                # Adicione aqui outros campos que você deseja retornar
+            })
+    return JsonResponse({'error': 'CNPJ inválido'}, status=400)
+
 
 @csrf_exempt
 @require_POST
