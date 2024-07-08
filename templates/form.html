@@ -19,6 +19,12 @@
                 padding: 10px;
             }
         }
+        .preview-image {
+            display: none;
+            width: 100%;
+            height: auto;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -115,28 +121,53 @@
 
         <div id="section4" class="hidden">
             <h3>Documentos</h3>
-<p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
-<div class="form-group">
-    <label for="cnh">Carteira de Habilitação</label>
-    <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação">
-    <img src="https://images.noticiasautomotivas.com.br/img/f/cnh-carteira-nacional-habilitacao.jpg" alt="Exemplo de CNH" style="width: 100%; height: auto;" onclick="document.getElementById('cnh').click();">
-</div>
-<div class="form-group">
-    <label for="rg-frente">RG Frente</label>
-    <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente">
-</div>
-<div class="form-group">
-    <label for="rg-verso">RG Verso</label>
-    <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso">
-</div>
-<button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
-<button type="submit" class="btn btn-primary mt-3">Enviar</button>
+            <p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
+            <div class="form-group">
+                <label for="cnh">Carteira de Habilitação</label>
+                <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação">
+                <img src="https://images.noticiasautomotivas.com.br/img/f/cnh-carteira-nacional-habilitacao.jpg" alt="Exemplo de CNH" style="width: 100%; height: auto;" onclick="document.getElementById('cnh').click();">
+                <img id="preview-cnh" class="preview-image" alt="Pré-visualização da CNH">
+            </div>
+            <div class="form-group">
+                <label for="rg-frente">RG Frente</label>
+                <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente">
+                <img id="preview-rg-frente" class="preview-image" alt="Pré-visualização do RG Frente">
+            </div>
+            <div class="form-group">
+                <label for="rg-verso">RG Verso</label>
+                <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso">
+                <img id="preview-rg-verso" class="preview-image" alt="Pré-visualização do RG Verso">
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
+            <button type="submit" class="btn btn-primary mt-3">Enviar</button>
         </div>
     </form>
 </div>
 
+<!-- Modal para pré-visualização da imagem -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" role="dialog" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imagePreviewModalLabel">Pré-visualização da Imagem</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modal-image" src="" class="img-fluid" alt="Pré-visualização">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Não</button>
+                <button type="button" class="btn btn-primary" id="confirmImage">Sim</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 {% if erro %}
 <script>
 alert("{{ erro }}");
@@ -168,9 +199,9 @@ alert("{{ erro }}");
     let currentSection = 1;
 
     function updateProgressBar() {
-    const progress = (currentSection / 4) * 100;
-    document.getElementById('progressBar').style.width = progress + '%';
-}
+        const progress = (currentSection / 4) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+    }
 
     function validateSection(sectionId) {
         const inputs = document.querySelectorAll(`#section${sectionId} input[required]`);
@@ -213,12 +244,74 @@ alert("{{ erro }}");
     document.getElementById('dataForm').addEventListener('submit', function(event) {
         if (!validateSection(currentSection) || !validateDocumentsSection()) {
             event.preventDefault();
+        } else {
+            if (!confirm('Tem certeza de que deseja enviar o formulário?')) {
+                event.preventDefault();
+            }
         }
     });
 
     document.getElementById('section4').addEventListener('change', validateDocumentsSection);
-</script>
-<script>
+
+    // Adiciona função de validação de imagem
+    function validateImage(fileInput) {
+        const file = fileInput.files[0];
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+
+        if (file) {
+            if (!validImageTypes.includes(file.type)) {
+                alert('Por favor, envie uma imagem válida (JPEG ou PNG).');
+                fileInput.value = '';
+                return false;
+            } else {
+                previewImage(fileInput);
+            }
+        }
+        return true;
+    }
+
+    // Função para pré-visualizar imagem
+    function previewImage(fileInput) {
+        const preview = document.getElementById('preview-' + fileInput.name);
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onloadend = function () {
+            preview.src = reader.result;
+            preview.style.display = 'block';
+
+            // Mostrar modal com a imagem
+            document.getElementById('modal-image').src = reader.result;
+            $('#imagePreviewModal').modal('show');
+
+            document.getElementById('confirmImage').onclick = function() {
+                $('#imagePreviewModal').modal('hide');
+                return true;
+            }
+
+            $('.modal-footer .btn-secondary').click(function() {
+                fileInput.value = '';
+                preview.style.display = 'none';
+                $('#imagePreviewModal').modal('hide');
+                return false;
+            });
+        }
+
+        if (file) {
+            reader.readAsDataURL(file);
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+        }
+    }
+
+    // Adiciona evento de mudança para validar e pré-visualizar imagens
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            validateImage(this);
+        });
+    });
+
     $(document).ready(function(){
         $('#cnpj').change(function(){
             var cnpj = $(this).val().replace(/[^0-9]/g, ''); // Remove non-numeric characters
