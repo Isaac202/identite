@@ -1,12 +1,11 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import Http404
-import base64
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from base.filters import DadosClienteFilter, VoucherFilter
-from base.task import salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
 from .utils import adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
 from datetime import datetime
@@ -141,14 +140,14 @@ def form(request,slug=None):
             rg_frente = rg_verso = cnh = None
 
             if "rg-frente" in request.FILES:
-                rg_frente = base64.b64encode(request.FILES["rg-frente"].read()).decode('utf-8')
+                novo_cliente.rg_frente.save(request.FILES["rg-frente"].name, request.FILES["rg-frente"])
 
             if "rg-verso" in request.FILES:
-                rg_verso = base64.b64encode(request.FILES["rg-verso"].read()).decode('utf-8')
+                novo_cliente.rg_verso.save(request.FILES["rg-verso"].name, request.FILES["rg-verso"])
 
             if "cnh" in request.FILES:
-                cnh = base64.b64encode(request.FILES["cnh"].read()).decode('utf-8')
-            salvar_arquivos_cliente.delay(novo_cliente.id, rg_frente, rg_verso, cnh)
+                novo_cliente.carteira_habilitacao.save(request.FILES["cnh"].name, request.FILES["cnh"])
+            novo_cliente.save()
             return redirect('gerar_protocolo', pedido=pedido.pedido) # redireciona para a view de agendamento
         else:
             return render(request, 'form.html', {'erro': erro,'slug': slug})
@@ -316,3 +315,26 @@ def delete_voucher(request, id):
         voucher.delete()
         return JsonResponse({'result': 'OK'}, status=200)
     return JsonResponse({'error': 'Invalid method'}, status=400)
+
+
+
+@csrf_exempt
+def update_status(request, pedido_id):
+    if request.method == 'POST':
+        try:
+            pedido = Pedidos.objects.get(pk=pedido_id)
+        except ObjectDoesNotExist:
+            return JsonResponse({'error': 'Pedido não encontrado'}, status=404)
+
+        status, error = consultar_status_pedido(pedido)
+        if error:
+            return JsonResponse({'error': error}, status=400)
+
+        if status in dict(Pedidos.STATUS_CHOICES):
+            pedido.status = status
+            pedido.save()
+            return JsonResponse({'success': 'Status atualizado com sucesso'}, status=200)
+        else:
+            return JsonResponse({'error': 'Status inválido'}, status=400)
+    else:
+        return JsonResponse({'error': 'Método inválido'}, status=405)

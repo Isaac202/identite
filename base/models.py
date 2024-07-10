@@ -9,7 +9,8 @@ class BaseModel(models.Model):
         abstract = True
 
 def upload_image_book(instance, filename):
-    return f"documentos_identite/{instance.nome_completo}-{filename}"
+    return f'uploads/consulti/{instance.pk}/{filename}'
+
 
 class Lote(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -34,9 +35,16 @@ class Voucher(BaseModel):
 
 
 class Pedidos(BaseModel):
+    STATUS_CHOICES = [
+        ('1', 'Emissão liberada'),
+        ('2', 'Protocolo Gerado'),
+        ('3', 'Emitida'),
+    ]
+
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
     hashVenda = models.CharField(max_length=255)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
 
     def __str__(self):
         return f'Numero do Pedido:{self.pedido}'
@@ -59,11 +67,11 @@ class DadosCliente(BaseModel):
     cod_ibge = models.CharField(max_length=10)
     telefone = models.CharField(max_length=20)
     data_nacimento = models.CharField(max_length=100)
-    rg_frente = models.ImageField(
+    rg_frente = models.FileField(
         upload_to=upload_image_book, blank=True, null=True)
-    rg_verso = models.ImageField(
+    rg_verso = models.FileField(
         upload_to=upload_image_book, blank=True, null=True)
-    carteira_habilitacao = models.ImageField(
+    carteira_habilitacao = models.FileField(
         upload_to=upload_image_book, blank=True, null=True)
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)

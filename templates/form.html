@@ -19,11 +19,14 @@
                 padding: 10px;
             }
         }
-        .preview-image {
+        .preview-image, .preview-pdf {
             display: none;
             width: 100%;
             height: auto;
             margin-top: 10px;
+        }
+        .preview-pdf {
+            height: 500px; /* Define a height for PDF preview */
         }
     </style>
 </head>
@@ -124,19 +127,22 @@
             <p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
             <div class="form-group">
                 <label for="cnh">Carteira de Habilitação</label>
-                <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação">
+                <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação" accept="image/jpeg, image/png, image/jpg, application/pdf">
                 <img src="https://images.noticiasautomotivas.com.br/img/f/cnh-carteira-nacional-habilitacao.jpg" alt="Exemplo de CNH" style="width: 100%; height: auto;" onclick="document.getElementById('cnh').click();">
                 <img id="preview-cnh" class="preview-image" alt="Pré-visualização da CNH">
+                <iframe id="preview-cnh-pdf" class="preview-pdf" frameborder="0"></iframe>
             </div>
             <div class="form-group">
                 <label for="rg-frente">RG Frente</label>
-                <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente">
+                <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente" accept="image/jpeg, image/png, image/jpg, application/pdf">
                 <img id="preview-rg-frente" class="preview-image" alt="Pré-visualização do RG Frente">
+                <iframe id="preview-rg-frente-pdf" class="preview-pdf" frameborder="0"></iframe>
             </div>
             <div class="form-group">
                 <label for="rg-verso">RG Verso</label>
-                <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso">
+                <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso" accept="image/jpeg, image/png, image/jpg, application/pdf">
                 <img id="preview-rg-verso" class="preview-image" alt="Pré-visualização do RG Verso">
+                <iframe id="preview-rg-verso-pdf" class="preview-pdf" frameborder="0"></iframe>
             </div>
             <button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
             <button type="submit" class="btn btn-primary mt-3">Enviar</button>
@@ -144,18 +150,19 @@
     </form>
 </div>
 
-<!-- Modal para pré-visualização da imagem -->
+
 <div class="modal fade" id="imagePreviewModal" tabindex="-1" role="dialog" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="imagePreviewModalLabel">Pré-visualização da Imagem</h5>
+                <h5 class="modal-title" id="imagePreviewModalLabel">Pré-visualização do Arquivo</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body text-center">
-                <img id="modal-image" src="" class="img-fluid" alt="Pré-visualização">
+                <img id="modal-image" src="" class="img-fluid" alt="Pré-visualização da Imagem">
+                <iframe id="modal-pdf" class="preview-pdf" frameborder="0"></iframe>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Não</button>
@@ -253,35 +260,46 @@ alert("{{ erro }}");
 
     document.getElementById('section4').addEventListener('change', validateDocumentsSection);
 
-    // Adiciona função de validação de imagem
     function validateImage(fileInput) {
         const file = fileInput.files[0];
-        const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        const validFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
 
         if (file) {
-            if (!validImageTypes.includes(file.type)) {
-                alert('Por favor, envie uma imagem válida (JPEG ou PNG).');
+            if (!validFileTypes.includes(file.type)) {
+                alert('Por favor, envie uma imagem válida (JPEG, PNG) ou PDF.');
                 fileInput.value = '';
                 return false;
             } else {
-                previewImage(fileInput);
+                previewFile(fileInput);
             }
         }
         return true;
     }
 
-    // Função para pré-visualizar imagem
-    function previewImage(fileInput) {
-        const preview = document.getElementById('preview-' + fileInput.name);
+    function previewFile(fileInput) {
+        const previewImage = document.getElementById('preview-' + fileInput.name);
+        const previewPdf = document.getElementById('preview-' + fileInput.name + '-pdf');
         const file = fileInput.files[0];
         const reader = new FileReader();
 
         reader.onloadend = function () {
-            preview.src = reader.result;
-            preview.style.display = 'block';
+            if (file.type === 'application/pdf') {
+                previewPdf.src = reader.result;
+                previewPdf.style.display = 'block';
+                previewImage.style.display = 'none';
 
-            // Mostrar modal com a imagem
-            document.getElementById('modal-image').src = reader.result;
+                document.getElementById('modal-image').style.display = 'none';
+                document.getElementById('modal-pdf').src = reader.result;
+                document.getElementById('modal-pdf').style.display = 'block';
+            } else {
+                previewImage.src = reader.result;
+                previewImage.style.display = 'block';
+                previewPdf.style.display = 'none';
+
+                document.getElementById('modal-pdf').style.display = 'none';
+                document.getElementById('modal-image').src = reader.result;
+                document.getElementById('modal-image').style.display = 'block';
+            }
             $('#imagePreviewModal').modal('show');
 
             document.getElementById('confirmImage').onclick = function() {
@@ -291,7 +309,8 @@ alert("{{ erro }}");
 
             $('.modal-footer .btn-secondary').click(function() {
                 fileInput.value = '';
-                preview.style.display = 'none';
+                previewImage.style.display = 'none';
+                previewPdf.style.display = 'none';
                 $('#imagePreviewModal').modal('hide');
                 return false;
             });
@@ -300,12 +319,13 @@ alert("{{ erro }}");
         if (file) {
             reader.readAsDataURL(file);
         } else {
-            preview.src = '';
-            preview.style.display = 'none';
+            previewImage.src = '';
+            previewImage.style.display = 'none';
+            previewPdf.src = '';
+            previewPdf.style.display = 'none';
         }
     }
 
-    // Adiciona evento de mudança para validar e pré-visualizar imagens
     document.querySelectorAll('input[type="file"]').forEach(input => {
         input.addEventListener('change', function() {
             validateImage(this);

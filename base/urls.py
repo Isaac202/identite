@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia,check_voucher, create_voucher, delete_voucher, edit_voucher, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, get_empresa_data, list_vouchers, voucher_statistics
+from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia,check_voucher, create_voucher, delete_voucher, edit_voucher, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, get_empresa_data, list_vouchers, update_status, voucher_statistics
 from django.contrib.auth import views as auth_views
 
 router = DefaultRouter()
@@ -20,7 +20,8 @@ urlpatterns = [
     path('gerar_protocolo/<str:pedido>/', gerar_protocolo_view, name='gerar_protocolo'),
     path('create_voucher/', create_voucher, name='create_voucher'),
     path('edit_voucher/<int:id>/', edit_voucher, name='edit_voucher'),
+    path('update_status/<int:pedido_id>/', update_status, name='update_status'),
     path('delete_voucher/<int:id>/', delete_voucher, name='delete_voucher'),
-     path('login/', auth_views.LoginView.as_view(template_name='home/login.html'), name='login'),
+    path('login/', auth_views.LoginView.as_view(template_name='home/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]

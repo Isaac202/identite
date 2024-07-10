@@ -100,6 +100,7 @@
               <th>CNPJ</th>
               <th>Código do Voucher</th>
               <th>Voucher Ativo</th>
+              <th>Ação</th> <!-- Nova coluna para o botão de verificação de status -->
             </thead>
             <tbody id="voucher-table-body">
               {% for cliente in clients_with_vouchers %}
@@ -111,6 +112,9 @@
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
                 <td>
                   <input type="checkbox" class="toggle-validity" data-id="{{ cliente.voucher.id }}" {% if cliente.voucher.is_valid %}checked{% endif %}>
+                </td>
+                <td>
+                  <button class="btn btn-primary check-status" data-id="{{ cliente.pedido.pedido }}">Verificar Status</button> <!-- Botão de verificação de status -->
                 </td>
               </tr>
               {% endfor %}
@@ -157,7 +161,21 @@
           console.error('Erro ao copiar o código: ', err);
         });
       });
-
+      row.querySelector('.check-status').addEventListener('click', function() {
+    const voucherId = this.getAttribute('data-id');
+    fetch(`/update_status/${voucherId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status) {
+        alert('Status do voucher: ' + data.status);
+      }
+    });
+  });
       row.querySelector('.toggle-validity').addEventListener('change', function() {
         const voucherId = this.getAttribute('data-id');
         const isValid = this.checked;
