@@ -160,6 +160,7 @@ def consultar_status_pedido(pedido):
                 "Pedido": pedido,
                 "Protocolo": ""
     }
+    print(pedido)
     response = requests.post(endpont, data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:

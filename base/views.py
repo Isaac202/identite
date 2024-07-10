@@ -317,24 +317,27 @@ def delete_voucher(request, id):
     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 
-
+def get_key_by_value(dictionary, value):
+    for key, val in dictionary.items():
+        if val == value:
+            return key
 @csrf_exempt
 def update_status(request, pedido_id):
     if request.method == 'POST':
         try:
-            pedido = Pedidos.objects.get(pk=pedido_id)
+            pedido = Pedidos.objects.get(pedido=pedido_id)
         except ObjectDoesNotExist:
             return JsonResponse({'error': 'Pedido não encontrado'}, status=404)
+        status, error = consultar_status_pedido(pedido.pedido)
+        status_dict = dict(Pedidos.STATUS_CHOICES)
+        status_key = get_key_by_value(status_dict, status["StatusPedido"])
 
-        status, error = consultar_status_pedido(pedido)
         if error:
             return JsonResponse({'error': error}, status=400)
-
-        if status in dict(Pedidos.STATUS_CHOICES):
-            pedido.status = status
-            pedido.save()
-            return JsonResponse({'success': 'Status atualizado com sucesso'}, status=200)
-        else:
-            return JsonResponse({'error': 'Status inválido'}, status=400)
+    
+        pedido.status = status_key
+        pedido.save()
+        return JsonResponse({'success': 'Status atualizado com sucesso'}, status=200)
+   
     else:
         return JsonResponse({'error': 'Método inválido'}, status=405)

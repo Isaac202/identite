@@ -44,10 +44,13 @@ class Pedidos(BaseModel):
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
     hashVenda = models.CharField(max_length=255)
-    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1')
 
     def __str__(self):
         return f'Numero do Pedido:{self.pedido}'
+    def get_status_display(self):
+        status_dict = dict(self.STATUS_CHOICES)
+        return status_dict.get(self.status, "Status desconhecido")
 
 
 class DadosCliente(BaseModel):
