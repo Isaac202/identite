@@ -3,4 +3,7 @@ from .models import DadosCliente, Pedidos, Voucher
 
 admin.site.register(Voucher)
 admin.site.register(Pedidos)
-admin.site.register(DadosCliente)
+class DadosClienteAdmin(admin.ModelAdmin):
+    search_fields = ['nome', 'cpf']
+
+admin.site.register(DadosCliente, DadosClienteAdmin)
