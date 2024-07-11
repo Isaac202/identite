@@ -259,12 +259,12 @@ def create_voucher(request):
 @login_required
 def voucher_statistics(request):
     clientes = DadosCliente.objects.exclude(pedido__status=3)
-    for pedido in clientes:
-        status, error = consultar_status_pedido(pedido.pedido.pedido)
+    for cliente in clientes:
+        status, error = consultar_status_pedido(cliente.pedido.pedido)
         status_dict = dict(Pedidos.STATUS_CHOICES)
         status_key = get_key_by_value(status_dict, status["StatusPedido"])
-        pedido.status = status_key
-        pedido.save()
+        cliente.pedido.status = status_key
+        cliente.pedido.save()
     dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher'))
     clients_with_vouchers = dados_cliente_filter.qs
     all_voucher = Voucher.objects.all()
