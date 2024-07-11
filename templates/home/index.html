@@ -70,7 +70,7 @@
         <p class="card-category">Lista de clientes que utilizaram vouchers</p>
       </div>
       <div class="card-body">
-        <form style="max-width: 180px;"id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
+        <form style="max-width: 180px;" id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
           {% for field in filter.form %}
             <div class="form-group">
               {% if field.name == "start_date" %}
@@ -100,7 +100,6 @@
               <th>Código do Voucher</th>
               <th>Voucher Ativo</th>
               <th>Status</th>
-              <th>Ação</th>
             </thead>
             <tbody id="voucher-table-body">
               {% for cliente in clients_with_vouchers %}
@@ -110,13 +109,8 @@
                 <td>{{ cliente.pedido.protocolo }}</td>
                 <td>{{ cliente.cnpj }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
-                <td>
-                  <input type="checkbox" class="toggle-validity" data-id="{{ cliente.voucher.id }}" {% if cliente.voucher.is_valid %}checked{% endif %}>
-                </td>
+                <td>{{ cliente.voucher.is_valid|yesno:"Sim,Não" }}</td>
                 <td>{{ cliente.pedido.get_status_display }}</td>
-                <td>
-                  <button class="btn btn-primary check-status" data-id="{{ cliente.pedido.pedido }}">Verificar Status</button>
-                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -148,11 +142,6 @@
   document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search-input');
 
-    function updateVoucherRow(voucher) {
-      const row = document.querySelector(`tr[data-id="${voucher.id}"]`);
-      row.querySelector('.toggle-validity').checked = voucher.is_valid;
-    }
-
     function attachEventListeners(row) {
       row.querySelector('.voucher-code').addEventListener('click', function() {
         const code = this.innerText;
@@ -162,51 +151,12 @@
           console.error('Erro ao copiar o código: ', err);
         });
       });
-
-      row.querySelector('.check-status').addEventListener('click', function() {
-        const pedidoId = this.getAttribute('data-id');
-        fetch(`/update_status/${pedidoId}/`, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrftoken
-          },
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status) {
-            const statusCell = row.querySelector('td:nth-child(7)');
-            statusCell.textContent = data.status;
-            alert('Status atualizado para: ' + data.status);
-          }
-        })
-        .catch(error => {
-          console.error('Erro ao atualizar o status: ', error);
-        });
-      });
-
-      row.querySelector('.toggle-validity').addEventListener('change', function() {
-        const voucherId = this.getAttribute('data-id');
-        const isValid = this.checked;
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', csrftoken);
-        formData.append('is_valid', isValid);
-        fetch(`/edit_voucher/${voucherId}/`, {
-          method: 'POST',
-          body: formData,
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.voucher) {
-            updateVoucherRow(data.voucher);
-          }
-        });
-      });
     }
 
     searchInput.addEventListener('input', function() {
       const query = this.value.toLowerCase();
       document.querySelectorAll('#voucher-table-body tr').forEach(row => {
-        const code = row.cells[3].innerText.toLowerCase();
+        const code = row.cells[4].innerText.toLowerCase(); // index 4 for Código do Voucher
         row.style.display = code.includes(query) ? '' : 'none';
       });
     });
