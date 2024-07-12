@@ -82,7 +82,7 @@ def check_voucher(request):
             else:
                 return redirect('gerar_protocolo', pedido=cliente.pedido.pedido)
         except DadosCliente.DoesNotExist:
-            return render(request, 'invalid.html')
+            return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
     return render(request, 'check_voucher.html')
