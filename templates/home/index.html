@@ -101,6 +101,7 @@
               <th>Código do Voucher</th>
               <th>Voucher Ativo</th>
               <th>Status</th>
+              <th>Data</th>
             </thead>
             <tbody id="voucher-table-body">
               {% for cliente in clients_with_vouchers %}
@@ -113,6 +114,7 @@
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
                 <td>{{ cliente.voucher.is_valid|yesno:"Disponivel,Usado" }}</td>
                 <td>{{ cliente.pedido.get_status_display }}</td>
+                <td>{{ cliente.created_at }}</td>
               </tr>
               {% endfor %}
             </tbody>
