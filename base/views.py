@@ -92,7 +92,16 @@ def form(request,slug=None):
         raise Http404("Página não encontrada.")
     else:
         try:
-            voucher = Voucher.objects.get(code=slug, is_valid=True)
+            voucher = Voucher.objects.get(code=slug)
+            try:
+                cliente = DadosCliente.objects.get(voucher__code=slug)
+                if cliente.pedido.protocolo:
+                    return render(request, 'invalid.html', {'code': slug})
+                else:
+                    print('entrou sem protocolo')
+                    return redirect('gerar_protocolo', pedido=cliente.pedido.pedido)
+            except DadosCliente.DoesNotExist:
+                pass  # Passa direto se não existir um cliente com o voucher fornecido
         except Voucher.DoesNotExist:
             return render(request, 'invalid.html', {'code': slug})
 
