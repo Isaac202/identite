@@ -7,6 +7,6 @@ admin.site.register(Pedidos)
 
 class DadosClienteAdmin(admin.ModelAdmin):
     search_fields = ['nome_completo', 'cpf', 'cnpj']
-    list_filter = ['pedido__status']
+    list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
 
 admin.site.register(DadosCliente, DadosClienteAdmin)

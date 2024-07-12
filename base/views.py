@@ -76,13 +76,16 @@ def check_voucher(request):
         code = request.POST.get('voucher_code')
   
         try:
-            voucher = Voucher.objects.get(code=code, is_valid=True)
-            
-            return redirect('form', slug=code)
-        except Voucher.DoesNotExist:
+            cliente = DadosCliente.objects.get(voucher__code=code)
+            if cliente.pedido.protocolo:
+                return render(request, 'invalid.html')
+            else:
+                return redirect('gerar_protocolo', pedido=cliente.pedido.pedido)
+        except DadosCliente.DoesNotExist:
+            return render(request, 'invalid.html')
+        except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
     return render(request, 'check_voucher.html')
-
 
 def form(request,slug=None):
     if slug is None:
@@ -92,8 +95,18 @@ def form(request,slug=None):
             voucher = Voucher.objects.get(code=slug, is_valid=True)
         except Voucher.DoesNotExist:
             return render(request, 'invalid.html', {'code': slug})
+
     if request.method == 'POST':
-        
+        # Verifica se já existe um cliente com o mesmo voucher
+        clientes = DadosCliente.objects.filter(voucher__code=slug)
+        if clientes.count() > 1:
+            return render(request, 'invalid.html')
+        elif clientes.count() == 1:
+            cliente = clientes.first()
+            if not cliente.pedido.protocolo:
+                return redirect('gerar_protocolo', pedido=cliente.pedido.pedido)
+
+        # Se não existir, cria um novo cliente
         novo_cliente = DadosCliente()
         if request.POST["nomeCompleto"].strip():
             novo_cliente.nome_completo = request.POST["nomeCompleto"]
@@ -136,6 +149,7 @@ def form(request,slug=None):
         pedido, erro = salvar_venda(novo_cliente)
         if pedido is not None:
             novo_cliente.pedido_id = pedido.id
+            novo_cliente
             novo_cliente.save()
             rg_frente = rg_verso = cnh = None
 
@@ -148,6 +162,7 @@ def form(request,slug=None):
             if "cnh" in request.FILES:
                 novo_cliente.carteira_habilitacao.save(request.FILES["cnh"].name, request.FILES["cnh"])
             novo_cliente.save()
+            Voucher.objects.filter(code=slug).update(is_valid=False)
             return redirect('gerar_protocolo', pedido=pedido.pedido) # redireciona para a view de agendamento
         else:
             return render(request, 'form.html', {'erro': erro,'slug': slug})

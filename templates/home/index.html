@@ -111,7 +111,7 @@
                 <td>{{ cliente.cnpj }}</td>
                 <td>{{ cliente.telefone }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
-                <td>{{ cliente.voucher.is_valid|yesno:"Sim,Não" }}</td>
+                <td>{{ cliente.voucher.is_valid|yesno:"Disponivel,Usado" }}</td>
                 <td>{{ cliente.pedido.get_status_display }}</td>
               </tr>
               {% endfor %}
