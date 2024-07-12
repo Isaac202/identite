@@ -264,7 +264,7 @@ def gerar_protocolo_view(request, pedido=None):
 
 @login_required
 def list_vouchers(request):
-    voucher_list = Voucher.objects.all()
+    voucher_list = Voucher.objects.filter(is_valid=True)
     voucher_filter = VoucherFilter(request.GET, queryset=voucher_list)
     return render(request, 'home/listar_voucher.html', {'filter': voucher_filter})
 
