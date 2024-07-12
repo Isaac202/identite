@@ -97,6 +97,7 @@
               <th>Nome Completo</th>
               <th>Protocolo</th>
               <th>CNPJ</th>
+              <th>Telefone</th>
               <th>Código do Voucher</th>
               <th>Voucher Ativo</th>
               <th>Status</th>
@@ -108,6 +109,7 @@
                 <td>{{ cliente.nome_completo }}</td>
                 <td>{{ cliente.pedido.protocolo }}</td>
                 <td>{{ cliente.cnpj }}</td>
+                <td>{{ cliente.telefone }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
                 <td>{{ cliente.voucher.is_valid|yesno:"Sim,Não" }}</td>
                 <td>{{ cliente.pedido.get_status_display }}</td>

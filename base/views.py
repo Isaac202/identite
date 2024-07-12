@@ -348,3 +348,9 @@ def update_status(request, pedido_id):
    
     else:
         return JsonResponse({'error': 'Método inválido'}, status=405)
+    
+def handler404(request, exception, *args, **argv):
+    return render(request, '404.html', status=404)
+
+def handler500(request, *args, **argv):
+    return render(request, '500.html', status=500)

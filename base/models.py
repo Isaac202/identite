@@ -80,7 +80,7 @@ class DadosCliente(BaseModel):
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.nome_completo}'
+        return f'{self.nome_completo} - {self.telefone}'
 
 class Agendamento(BaseModel):
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)

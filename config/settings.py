@@ -3,6 +3,8 @@ from cryptography.fernet import Fernet
 from decouple import config
 from pathlib import Path
 import dj_database_url
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -212,3 +214,11 @@ SECRET_KEY_CRYPTO = "CIaj3DovFF1oTy6q50idyZnLcOUxZ67oy5cSO8l3sQM="
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+sentry_sdk.init(
+    dsn=config('SENTRY_DSN'),
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,  # Ajuste a taxa de amostragem conforme necessário
+    send_default_pii=True    # Enviar informações de identificação pessoal (PII) é opcional
+)
