@@ -10,3 +10,4 @@ env
 teste.py
 *.pem
 *.pen
+*.json
