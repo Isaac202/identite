@@ -40,7 +40,7 @@ def salvar_venda(cliente):
             "NomeRazaoSocial": cliente.razao_social,
             "NomeFantasia": cliente.nome_fantasia,
             "Email": cliente.email,
-            "CEP": cliente.cep,
+            "CEP": cliente.cep.replace("-", ""),
             "Logradouro": cliente.logradouro,
             "Numero": cliente.numero,
             "Complemento":cliente.complemento,
