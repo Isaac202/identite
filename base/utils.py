@@ -187,7 +187,7 @@ def adicionar_protocolo_e_hashvenda_no_pedido(pedido, protocolo,hash_venda):
 
 def verifica_se_pode_videoconferecias(cliente):
     # Verifique se o pedido pode ser videoconferido
-    endpoint = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
+    endpoint = f'{url}/api/GarAPIs/PsBio'
     headers = {"Content-Type": "application/json"}
     payload = {
         "apiKey": API_KEY,

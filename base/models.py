@@ -39,12 +39,13 @@ class Pedidos(BaseModel):
         ('1', 'Emissão liberada'),
         ('2', 'Protocolo Gerado'),
         ('3', 'Emitida'),
+        ('4', 'Em Validação')
     ]
 
     pedido = models.CharField(max_length=255)
     protocolo = models.CharField(max_length=255)
     hashVenda = models.CharField(max_length=255)
-    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1')
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1', null=True, blank=True)
 
     def __str__(self):
         return f'Numero do Pedido:{self.pedido}'

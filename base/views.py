@@ -282,7 +282,7 @@ def create_voucher(request):
 
 @login_required
 def voucher_statistics(request):
-    clientes = DadosCliente.objects.exclude(pedido__status=3)
+    clientes = DadosCliente.objects.all()
     for cliente in clientes:
         status, error = consultar_status_pedido(cliente.pedido.pedido)
         status_dict = dict(Pedidos.STATUS_CHOICES)
