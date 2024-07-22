@@ -345,15 +345,18 @@ def update_status(request, pedido_id):
 
 
 @csrf_exempt
-def create_client_and_assign_voucher(request):
-    api_key = request.headers.get('APIKEY')
+def create_client_and_assign_voucher(request):   
+    print(request.body)
+    print(json.loads(request.body))
+
     
-    if api_key != API_KEY:
-        return JsonResponse({'error': 'Invalid API Key'}, status=403)
     
     try:
         data = json.loads(request.body)
-        cnpj = data['cnpj']
+        if data['APIKEY'] != API_KEY:
+            return JsonResponse({'error': 'Invalid API Key'}, status=403)
+        print(data)
+        cnpj = "52365185000131"
     except (KeyError, json.JSONDecodeError):
         return JsonResponse({'error': 'CNPJ não fornecido ou dados malformados'}, status=400)
     
@@ -419,11 +422,10 @@ def create_client_and_assign_voucher(request):
     voucher.save()
     
     return JsonResponse({
-        'voucher': {
+        
             'id': voucher.id,
             'code': voucher.code,
             'is_valid': voucher.is_valid,
-        }
     }, status=201)
 
 
