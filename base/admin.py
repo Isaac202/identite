@@ -8,14 +8,16 @@ admin.site.register(Pedidos)
 
 
 class DadosClienteAdmin(admin.ModelAdmin):
-    list_display = ['nome_completo', 'get_pedido', 'cpf', 'cnpj', 'created_at', 'updated_at']
+    list_display = ['nome_completo', 'get_pedido', 'get_status','cpf', 'cnpj', 'created_at', 'updated_at']
     search_fields = ['nome_completo', 'cpf', 'cnpj']
     list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
 
     def get_pedido(self, obj):
         return obj.pedido.pedido
+    def get_status(self, obj):
+        return obj.pedido.status
     get_pedido.short_description = 'Pedido'  # Define um título para a coluna
-
+    get_status.short_description = 'Status'  # Define um título para a coluna
     def changelist_view(self, request, extra_context=None):
         # Obtenha a contagem total de clientes
         total_clientes = DadosCliente.objects.count()
