@@ -15,7 +15,7 @@ class DadosClienteAdmin(admin.ModelAdmin):
     def get_pedido(self, obj):
         return obj.pedido.pedido
     def get_status(self, obj):
-        return obj.pedido.status
+      return obj.pedido.get_status_display()
     get_pedido.short_description = 'Pedido'  # Define um título para a coluna
     get_status.short_description = 'Status'  # Define um título para a coluna
     def changelist_view(self, request, extra_context=None):
