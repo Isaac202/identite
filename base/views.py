@@ -80,6 +80,7 @@ def check_voucher(request):
         try:
             cliente = DadosCliente.objects.get(voucher__code=code)
             if cliente.pedido.protocolo:
+                print(cliente)
                 return render(request, 'invalid.html')
             else:
                 return redirect('form', slug=code)
