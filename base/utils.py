@@ -67,8 +67,8 @@ def salvar_venda(cliente):
                     print(erro["Ocorrencia"])
                     return None ,erro["Ocorrencia"]
             else:
-                pedido = Pedidos(pedido=response_data["Produtos"][0]["Pedido"], protocolo="")
-                pedido.save()
+                pedido = response_data["Produtos"][0]["Pedido"]
+        
                 return pedido, None
         except json.decoder.JSONDecodeError:
             print("JSONDecodeError: A resposta não é um JSON válido")
@@ -183,7 +183,11 @@ def adicionar_protocolo_e_hashvenda_no_pedido(pedido, protocolo,hash_venda):
     pedido.hashVenda = hash_venda
     pedido.save()
 
-
+def get_address_data(cep):
+    response = requests.get(f'https://viacep.com.br/ws/{cep}/json/')
+    if response.status_code == 200:
+        return response.json()
+    return None
 
 def verifica_se_pode_videoconferecias(cliente):
     # Verifique se o pedido pode ser videoconferido
@@ -198,3 +202,17 @@ def verifica_se_pode_videoconferecias(cliente):
     if not data.get('IsOk', True) and not cliente.carteira_habilitacao:
         return False
     return True
+
+def fetch_empresa_data(cnpj):
+    CPFCNPJ_API_KEY = settings.CPFCNPJ
+    if cnpj and len(cnpj) == 14:
+        response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'razao': data.get('razao'),
+                'fantasia': data.get('fantasia'),
+                'cep': data.get('matrizEndereco', {}).get('cep'),
+                # Adicione aqui outros campos que você deseja retornar
+            }
+    return None

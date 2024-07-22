@@ -42,14 +42,10 @@
         {% csrf_token %}
 
         <div id="section1">
-            <h3>Dados do Cliente</h3>
+            <h3>Olá {{nome_completo}}, por favor complete seus dados</h3>
             <div class="form-group">
                 <label for="nomeCompleto">Nome Completo</label>
                 <input type="text" class="form-control" name="nomeCompleto" placeholder="Nome Completo" required>
-            </div>
-            <div class="form-group">
-                <label for="CPF">CPF</label>
-                <input name="cpf" type="text" class="form-control" id="cpf" placeholder="CPF" required>
             </div>
             <div class="form-group">
                 <label for="email">Email</label>
@@ -59,70 +55,9 @@
                 <label for="telefone">Whatsapp</label>
                 <input name="telefone" type="telefone" class="form-control" id="telefone" placeholder="Whatsapp" required>
             </div>
-            <div class="form-group">
-                <label for="data_nacimento">Data Nascimento</label>
-                <input name="data_nacimento" type="text" class="form-control" id="data_nacimento" placeholder="Data Nascimento" required>
-            </div>
             <button type="button" class="btn btn-primary" onclick="nextSection(2)">Próximo</button>
         </div>
-
         <div id="section2" class="hidden">
-            <h3>Dados da Empresa</h3>
-            <div class="form-group">
-                <label for="CNPJ">CNPJ</label>
-                <input name="cnpj" type="text" class="form-control" id="cnpj" placeholder="CNPJ" required>
-            </div>
-            <div class="form-group">
-                <label for="nomeRazaoSocial">Nome/Razão Social</label>
-                <input type="text" class="form-control" name="nomeRazaoSocial" placeholder="Nome/Razão Social" required>
-            </div>
-            <div class="form-group">
-                <label for="nomeFantasia">Nome/Fantasia</label>
-                <input type="text" class="form-control" name="nomeFantasia" placeholder="Nome/Fantasia" required>
-            </div>
-            <button type="button" class="btn btn-secondary" onclick="prevSection(1)">Anterior</button>
-            <button type="button" class="btn btn-primary" onclick="nextSection(3)">Próximo</button>
-        </div>
-
-        <div id="section3" class="hidden">
-            <h3>Dados de Endereço</h3>
-            <div class="form-group">
-                <label for="cep">CEP</label>
-                <input type="text" class="form-control" name="cep" id="cep" placeholder="CEP" required>
-            </div>
-            <div class="form-group">
-                <label for="logradouro">Logradouro</label>
-                <input type="text" class="form-control" name="logradouro" placeholder="Logradouro" required>
-            </div>
-            <div class="form-group">
-                <label for="numero">Número</label>
-                <input type="text" class="form-control" name="numero" placeholder="Número" required>
-            </div>
-            <div class="form-group">
-                <label for="complemento">Complemento</label>
-                <input type="text" class="form-control" name="complemento">
-            </div>
-            <div class="form-group">
-                <label for="bairro">Bairro</label>
-                <input type="text" class="form-control" name="bairro" placeholder="Bairro" required>
-            </div>
-            <div class="form-group">
-                <label for="cidade">Cidade</label>
-                <input type="text" class="form-control" name="cidade" placeholder="Cidade" required>
-            </div>
-            <div class="form-group">
-                <label for="uf">UF</label>
-                <input type="text" class="form-control" name="uf" placeholder="UF" required>
-            </div>
-            <div class="form-group">
-                <label for="codigoIBGE">Código IBGE</label>
-                <input type="text" class="form-control" name="codigoIBGE" placeholder="Código IBGE" required>
-            </div>
-            <button type="button" class="btn btn-secondary" onclick="prevSection(2)">Anterior</button>
-            <button type="button" class="btn btn-primary" onclick="nextSection(4)">Próximo</button>
-        </div>
-
-        <div id="section4" class="hidden">
             <h3>Documentos</h3>
             <p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
             <div class="form-group">
@@ -144,7 +79,7 @@
                 <img id="preview-rg-verso" class="preview-image" alt="Pré-visualização do RG Verso">
                 <iframe id="preview-rg-verso-pdf" class="preview-pdf" frameborder="0"></iframe>
             </div>
-            <button type="button" class="btn btn-secondary" onclick="prevSection(3)">Anterior</button>
+            <button type="button" class="btn btn-secondary" onclick="prevSection(2)">Anterior</button>
             <button type="submit" class="btn btn-primary mt-3">Enviar</button>
         </div>
     </form>
@@ -206,7 +141,7 @@ alert("{{ erro }}");
     let currentSection = 1;
 
     function updateProgressBar() {
-        const progress = (currentSection / 4) * 100;
+        const progress = (currentSection / 2) * 100;
         document.getElementById('progressBar').style.width = progress + '%';
     }
 
@@ -258,7 +193,7 @@ alert("{{ erro }}");
         }
     });
 
-    document.getElementById('section4').addEventListener('change', validateDocumentsSection);
+    document.getElementById('section2').addEventListener('change', validateDocumentsSection);
 
     function validateImage(fileInput) {
         const file = fileInput.files[0];

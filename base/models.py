@@ -36,31 +36,41 @@ class Voucher(BaseModel):
 
 class Pedidos(BaseModel):
     STATUS_CHOICES = [
-        ('1', 'Emissão liberada'),
-        ('2', 'Protocolo Gerado'),
-        ('3', 'Emitida'),
-        ('4', 'Em Validação')
+        ('1', 'Não Confirmada'),
+        ('2', 'Solicitação de Estorno'),
+        ('3', 'Estornada'),
+        ('4', 'Emissão liberada'),
+        ('5', 'Protocolo Gerado'),
+        ('6', 'Emitida'),
+        ('7', 'Revogada'),
+        ('8', 'Em Verificação'),
+        ('9', 'Em Validação'),
+        ('11', 'Recusada'),
+        ('12', 'Cancelada'),
+        ('13', 'Atribuído a Voucher')  # Novo status adicionado aqui
     ]
 
-    pedido = models.CharField(max_length=255)
-    protocolo = models.CharField(max_length=255)
-    hashVenda = models.CharField(max_length=255)
-    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1', null=True, blank=True)
+    pedido = models.CharField(max_length=255, blank=True, null=True)
+    protocolo = models.CharField(max_length=255, blank=True, null=True)
+    hashVenda = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='1', null=True, blank=True)
 
     def __str__(self):
         return f'Numero do Pedido:{self.pedido}'
+
     def get_status_display(self):
         status_dict = dict(self.STATUS_CHOICES)
         return status_dict.get(self.status, "Status desconhecido")
+
 
 
 class DadosCliente(BaseModel):
     nome_completo = models.CharField(max_length=255)
     nome_fantasia = models.CharField(max_length=255)
     razao_social = models.CharField(max_length=255)
-    cpf = models.CharField(max_length=14)
+    cpf = models.CharField(max_length=14,blank=True, null=True)
     cnpj = models.CharField(max_length=14)
-    email = models.EmailField()
+    email = models.EmailField(blank=True, null=True)
     cep = models.CharField(max_length=14)
     logradouro = models.CharField(max_length=255)
     numero = models.CharField(max_length=10)
@@ -69,8 +79,8 @@ class DadosCliente(BaseModel):
     cidade = models.CharField(max_length=255)
     uf = models.CharField(max_length=10)
     cod_ibge = models.CharField(max_length=10)
-    telefone = models.CharField(max_length=20)
-    data_nacimento = models.CharField(max_length=100)
+    telefone = models.CharField(max_length=20,blank=True, null=True)
+    data_nacimento = models.CharField(max_length=100,blank=True, null=True)
     rg_frente = models.FileField(
         upload_to=upload_image_book, blank=True, null=True)
     rg_verso = models.FileField(

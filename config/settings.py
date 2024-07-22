@@ -35,11 +35,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'widget_tweaks',
+    'corsheaders',
 
     'base',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -71,7 +73,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-if DEBUG:
+if not DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -193,7 +195,16 @@ if not DEBUG:
 
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Adicione esta linha
+# Desabilitar políticas de segurança para desenvolvimento
+SECURE_BROWSER_XSS_FILTER = False
+SECURE_CONTENT_TYPE_NOSNIFF = False
+X_FRAME_OPTIONS = 'ALLOWALL'
+SECURE_SSL_REDIRECT = False
 
+# Para desenvolvimento, certifique-se de que a segurança CORS está desabilitada
+CORS_ORIGIN_ALLOW_ALL = True
+
+# Se você estiver usando Django-CORS-Headers
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/painel/'
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
