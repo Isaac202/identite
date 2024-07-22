@@ -356,7 +356,7 @@ def create_client_and_assign_voucher(request):
         if data['APIKEY'] != API_KEY:
             return JsonResponse({'error': 'Invalid API Key'}, status=403)
         print(data)
-        cnpj = "52365185000131"
+        cnpj = data['cnpj'].replace(".", "").replace("-", "").replace("/", "")
     except (KeyError, json.JSONDecodeError):
         return JsonResponse({'error': 'CNPJ não fornecido ou dados malformados'}, status=400)
     
