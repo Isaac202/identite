@@ -96,10 +96,10 @@
               <th>ID</th>
               <th>Nome Completo</th>
               <th>Protocolo</th>
+              <th>Pedido</th>
               <th>CNPJ</th>
               <th>Telefone</th>
               <th>Código do Voucher</th>
-              <th>Voucher Ativo</th>
               <th>Status</th>
               <th>Data</th>
             </thead>
@@ -109,10 +109,10 @@
                 <td>{{ cliente.id }}</td>
                 <td>{{ cliente.nome_completo }}</td>
                 <td>{{ cliente.pedido.protocolo }}</td>
+                <td>{{ cliente.pedido.pedido }}</td>
                 <td>{{ cliente.cnpj }}</td>
                 <td>{{ cliente.telefone }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code }}</td>
-                <td>{{ cliente.voucher.is_valid|yesno:"Disponivel,Usado" }}</td>
                 <td>{{ cliente.pedido.get_status_display }}</td>
                 <td>{{ cliente.created_at }}</td>
               </tr>

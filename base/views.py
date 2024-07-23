@@ -254,8 +254,9 @@ def voucher_statistics(request):
         status_dict = dict(Pedidos.STATUS_CHOICES)
         if "StatusPedido" in status:
             status_key = get_key_by_value(status_dict, status["StatusPedido"])
-            cliente.pedido.status = status_key
-            clientes_to_update.append(cliente.pedido)
+            if cliente.pedido.status != status_key:
+                cliente.pedido.status = status_key
+                clientes_to_update.append(cliente.pedido)
 
     # Atualiza todos os pedidos modificados de uma vez
     Pedidos.objects.bulk_update(clientes_to_update, ['status'])
