@@ -248,18 +248,18 @@ def create_voucher(request):
 @login_required
 def voucher_statistics(request):
     clientes = DadosCliente.objects.exclude(pedido__status='6')
+    clientes_to_update = []
     for cliente in clientes:
         status, error = consultar_status_pedido(cliente.pedido.pedido)
-        print(status)
         status_dict = dict(Pedidos.STATUS_CHOICES)
         if "StatusPedido" in status:
             status_key = get_key_by_value(status_dict, status["StatusPedido"])
-            print(status_key)
-            print(status["StatusPedido"])
-            print(status_dict)
             cliente.pedido.status = status_key
-            cliente.pedido.save()
-    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher'))
+            clientes_to_update.append(cliente.pedido)
+
+    # Atualiza todos os pedidos modificados de uma vez
+    Pedidos.objects.bulk_update(clientes_to_update, ['status'])
+    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher').order_by('-created_at'))
     clients_with_vouchers = dados_cliente_filter.qs
     all_voucher = Voucher.objects.all()
     total_clients = clients_with_vouchers.distinct().count()
