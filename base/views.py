@@ -12,6 +12,8 @@ from .utils import fetch_empresa_data, get_address_data,adicionar_protocolo_e_ha
 from datetime import datetime
 from .forms import VoucherForm
 from django.utils.dateparse import parse_date
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from rest_framework import viewsets
 from rest_framework import viewsets, permissions
 from django.views.decorators.http import require_POST
@@ -245,8 +247,7 @@ def create_voucher(request):
         form = VoucherForm()
     return render(request, 'home/create_voucher.html', {'form': form})
 
-@login_required
-def voucher_statistics(request):
+def update_status(request):
     clientes = DadosCliente.objects.exclude(pedido__status='6')
     clientes_to_update = []
     for cliente in clientes:
@@ -260,6 +261,12 @@ def voucher_statistics(request):
 
     # Atualiza todos os pedidos modificados de uma vez
     Pedidos.objects.bulk_update(clientes_to_update, ['status'])
+
+    # Redireciona para a página anterior
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('painel')))
+@login_required
+def voucher_statistics(request):
+
     dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher').order_by('-created_at'))
     clients_with_vouchers = dados_cliente_filter.qs
     all_voucher = Voucher.objects.all()

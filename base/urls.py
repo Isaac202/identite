@@ -13,6 +13,7 @@ urlpatterns = [
     path('form/<slug:slug>/', form, name='form'),
     path('create-client-voucher/', create_client_and_assign_voucher, name='create_client_voucher'),
     path('api/', include(router.urls)),
+    path('update_status/', update_status, name='update_status'),
     path('vouchers/', list_vouchers, name='vouchers'),
     path('get_empresa_data/', get_empresa_data, name='get_empresa_data'),
     path('generate_vouchers/', generate_vouchers, name='generate_vouchers'),
