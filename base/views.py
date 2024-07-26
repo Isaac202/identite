@@ -78,6 +78,7 @@ class DadosClienteViewSet(viewsets.ModelViewSet):
 def check_voucher(request):
     if request.method == 'POST':
         code = request.POST.get('voucher_code')
+        cnpj = request.POST["cnpj"]
   
         try:
             cliente = DadosCliente.objects.get(voucher__code=code)
@@ -88,7 +89,7 @@ def check_voucher(request):
                 create_client_and_order(cnpj, code)
                 return redirect('form', slug=code)
         except DadosCliente.DoesNotExist:
-            cnpj = request.POST["cnpj"]
+            
             create_client_and_order(cnpj, code)
             return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
