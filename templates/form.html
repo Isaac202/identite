@@ -85,7 +85,29 @@
     </form>
 </div>
 
-
+<!-- Modal -->
+<div class="modal fade" id="cnpjModal" tabindex="-1" role="dialog" aria-labelledby="cnpjModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'form' slug %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cnpjModalLabel">Informe seu CNPJ</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="cnpj">CNPJ</label>
+                        <input type="text" class="form-control" id="cnpj" name="cnpj" placeholder="00.000.000/0000-00" required>
+                        <div id="cnpjError" class="text-danger" style="display: none;">Por favor, preencha o campo CNPJ.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" id="saveCnpj">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="imagePreviewModal" tabindex="-1" role="dialog" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -139,6 +161,15 @@ alert("{{ erro }}");
     });
 
     let currentSection = 1;
+// Verifica se o cliente existe
+var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
+        if (!clienteExistente) {
+            // Se o cliente não existir, exibe o modal
+            $('#cnpjModal').modal({
+                backdrop: 'static',
+                keyboard: false
+            });
+        }
 
     function updateProgressBar() {
         const progress = (currentSection / 2) * 100;

@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from base.filters import DadosClienteFilter, VoucherFilter
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
-from .utils import fetch_empresa_data, get_address_data,adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
+from .utils import create_client_and_order, fetch_empresa_data, get_address_data,adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
 from datetime import datetime
 from .forms import VoucherForm
 from django.utils.dateparse import parse_date
@@ -85,8 +85,11 @@ def check_voucher(request):
                 print(cliente)
                 return render(request, 'invalid.html')
             else:
+                create_client_and_order(cnpj, code)
                 return redirect('form', slug=code)
         except DadosCliente.DoesNotExist:
+            cnpj = request.POST["cnpj"]
+            create_client_and_order(cnpj, code)
             return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
@@ -99,11 +102,21 @@ def form(request, slug=None):
         try:
             voucher = Voucher.objects.get(code=slug)
             cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-            nome_completo = cliente.nome_fantasia if cliente.nome_fantasia != "N/A" else cliente.razao_social.split(" ")[0] 
+            if cliente:
+                cliente_existente = True
+                nome_completo = cliente.nome_fantasia if cliente.nome_fantasia != "N/A" else cliente.razao_social.split(" ")[0] 
+            else:
+                nome_completo = None
+                cliente_existente = False
         except Voucher.DoesNotExist:
             return render(request, 'invalid.html', {'code': slug})
 
     if request.method == 'POST':
+        if "cnpj" in request.POST and request.POST["cnpj"].strip():
+            cnpj = request.POST["cnpj"]
+            create_client_and_order(cnpj, slug)
+            return redirect(request.path)
+        
         cliente = DadosCliente.objects.get(voucher__code=slug)
 
         if request.POST["nomeCompleto"].strip():
@@ -133,9 +146,8 @@ def form(request, slug=None):
             Voucher.objects.filter(code=slug).update(is_valid=False)
             return redirect('gerar_protocolo', pedido=pedido)
         else:
-            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente})
-    return render(request, 'form.html', {'slug': slug, 'cliente': cliente,'nome_completo': nome_completo})
-
+            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'cliente_existente': cliente_existente})
+    return render(request, 'form.html', {'slug': slug, 'cliente': cliente,'nome_completo': nome_completo, 'cliente_existente': cliente_existente})
 
 
 def agendar_videoconferencia(request, pedido=None):
@@ -353,88 +365,20 @@ def update_status(request, pedido_id):
 
 
 @csrf_exempt
-def create_client_and_assign_voucher(request):   
-    print(request.body)
-    print(json.loads(request.body))
-
-    
-    
-    try:
-        data = json.loads(request.body)
-        if data['APIKEY'] != API_KEY:
-            return JsonResponse({'error': 'Invalid API Key'}, status=403)
-        print(data)
-        cnpj = data['cnpj'].replace(".", "").replace("-", "").replace("/", "")
-    except (KeyError, json.JSONDecodeError):
-        return JsonResponse({'error': 'CNPJ não fornecido ou dados malformados'}, status=400)
-    
-    if not cnpj or len(cnpj) != 14:
-        return JsonResponse({'error': 'CNPJ inválido'}, status=400)
-    
-    # Obter dados da empresa pelo CNPJ
-    empresa_data = fetch_empresa_data(cnpj)
-    if not empresa_data:
-        return JsonResponse({'error': 'Dados da empresa não encontrados'}, status=404)
-    
-    # Obter dados de endereço pelo CEP
-    cep = empresa_data.get('cep')
-    endereco_data = get_address_data(cep)
-    if not endereco_data:
-        return JsonResponse({'error': 'Dados de endereço não encontrados'}, status=404)
-    
-    # Verificar se há um voucher válido disponível
+def create_client_and_assign_voucher(request):  
+    data = json.loads(request.body)
+    if data['APIKEY'] != API_KEY:
+        return JsonResponse({'error': 'Invalid API Key'}, status=403)
+    cnpj = data['cnpj'].replace(".", "").replace("-", "").replace("/", "")
     voucher = Voucher.objects.filter(is_valid=True).first()
     if not voucher:
         return JsonResponse({'error': 'Nenhum voucher disponível'}, status=404)
-    
-    # Criar um novo pedido
-    novo_pedido = Pedidos(
-        pedido=generate_random_code(),  # Você pode ajustar como deseja gerar o código do pedido
-        status='13'  # Atribuído a Voucher
-    )
-    novo_pedido.save()
-
-    # Preparar dados do cliente
-    nome_completo = empresa_data.get('razao') or 'N/A'
-    nome_fantasia = empresa_data.get('fantasia') or 'N/A'
-    razao_social = empresa_data.get('razao') or 'N/A'
-    logradouro = endereco_data.get('logradouro') or 'N/A'
-    complemento = endereco_data.get('complemento', '')
-    bairro = endereco_data.get('bairro') or 'N/A'
-    cidade = endereco_data.get('localidade') or 'N/A'
-    uf = endereco_data.get('uf') or 'N/A'
-    cod_ibge = endereco_data.get('ibge') or 'N/A'
-    numero = 'SN'
-
-    # Criar um novo cliente
-    novo_cliente = DadosCliente(
-        nome_completo=nome_completo,
-        nome_fantasia=nome_fantasia,
-        razao_social=razao_social,
-        cnpj=cnpj,
-        cep=cep or '40110-100',  # Substitua por um valor padrão se necessário
-        logradouro=logradouro,
-        complemento=complemento,
-        bairro=bairro,
-        numero=numero,
-        cidade=cidade,
-        uf=uf,
-        cod_ibge=cod_ibge,  # Adicionando o código do IBGE
-        pedido=novo_pedido,  # Associar o pedido ao cliente
-        voucher=voucher
-    )
-    novo_cliente.save()
-    
-    # Inativa o voucher
     voucher.is_valid = False
-    voucher.save()
-    
     return JsonResponse({
-        
-            'id': voucher.id,
-            'code': voucher.code,
-            'is_valid': voucher.is_valid,
-    }, status=201)
+        'id': voucher.id,
+        'code': voucher.code,
+        'is_valid': voucher.is_valid,
+    }, status=200)
 
 
 

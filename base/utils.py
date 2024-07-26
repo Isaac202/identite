@@ -4,7 +4,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 import random
 import string
-from base.models import Pedidos
+from base.models import DadosCliente, Pedidos, Voucher
 
 def encrypt_voucher(voucher_code):
     fernet = Fernet(settings.SECRET_KEY_CRYPTO.encode())
@@ -150,7 +150,63 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
     
+def create_client_and_order(cnpj, voucher):
+    # Obter dados da empresa pelo CNPJ
+    print(voucher)
+    cnpj = cnpj.replace(".", "").replace("-", "").replace("/", "")
+    empresa_data = fetch_empresa_data(cnpj)
+    if not empresa_data:
+        return None, {'error': 'Dados da empresa não encontrados'}, 404
+    
+    # Obter dados de endereço pelo CEP
+    cep = empresa_data.get('cep')
+    endereco_data = get_address_data(cep)
+    if not endereco_data:
+        return None, {'error': 'Dados de endereço não encontrados'}, 404
 
+    # Criar um novo pedido
+    novo_pedido = Pedidos(
+        pedido=generate_random_code(),  # Você pode ajustar como deseja gerar o código do pedido
+        status='13'  # Atribuído a Voucher
+    )
+    novo_pedido.save()
+
+    # Preparar dados do cliente
+    nome_completo = empresa_data.get('razao') or 'N/A'
+    nome_fantasia = empresa_data.get('fantasia') or 'N/A'
+    razao_social = empresa_data.get('razao') or 'N/A'
+    logradouro = endereco_data.get('logradouro') or 'N/A'
+    complemento = endereco_data.get('complemento', '')
+    bairro = endereco_data.get('bairro') or 'N/A'
+    cidade = endereco_data.get('localidade') or 'N/A'
+    uf = endereco_data.get('uf') or 'N/A'
+    cod_ibge = endereco_data.get('ibge') or 'N/A'
+    numero = 'SN'
+    voucher = Voucher.objects.get(code=voucher)
+    # Criar um novo cliente
+    novo_cliente = DadosCliente(
+        nome_completo=nome_completo,
+        nome_fantasia=nome_fantasia,
+        razao_social=razao_social,
+        cnpj=cnpj,
+        cep=cep or '40110-100',  # Substitua por um valor padrão se necessário
+        logradouro=logradouro,
+        complemento=complemento,
+        bairro=bairro,
+        numero=numero,
+        cidade=cidade,
+        uf=uf,
+        cod_ibge=cod_ibge,  # Adicionando o código do IBGE
+        pedido=novo_pedido,  # Associar o pedido ao cliente
+        voucher=voucher
+    )
+    novo_cliente.save()
+    
+    # Inativa o voucher
+    voucher.is_valid = False
+    voucher.save()
+
+    return novo_cliente, None, None
 
 def consultar_status_pedido(pedido):
     endpont = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CERTIFICADO DIGITAL</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <style>
         body {
             font-size: 1.25rem; /* Aumenta o tamanho da fonte */
@@ -20,6 +22,10 @@
         <form id="voucherForm" method="post" class="mt-5"> <!-- Adiciona margem superior -->
             {% csrf_token %}
             <div class="form-group">
+                <label for="cnpj">Insira seu CNPJ</label>
+                <input type="text" class="form-control form-control-lg" id="cnpj" name="cnpj" required> <!-- Campo de entrada para o CNPJ -->
+            </div>
+            <div class="form-group">
                 <label for="voucher_code">Insira seu Voucher</label>
                 <input type="text" class="form-control form-control-lg" id="voucher_code" name="voucher_code" required> <!-- Aumenta o tamanho do campo de entrada -->
             </div>
@@ -28,7 +34,14 @@
     </div>
 
     <script>
+        $(document).ready(function(){
+            $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
+        });
+
         document.getElementById('voucherForm').addEventListener('submit', function(event) {
+            var cnpjInput = document.getElementById('cnpj');
+            cnpjInput.value = cnpjInput.value.replace(/\D+/g, ''); // Remove todos os caracteres não numéricos
+
             var voucherInput = document.getElementById('voucher_code');
             voucherInput.value = voucherInput.value.replace(/\s+/g, ''); // Remove todos os espaços
         });
