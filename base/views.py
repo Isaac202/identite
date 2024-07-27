@@ -260,7 +260,7 @@ def create_voucher(request):
         form = VoucherForm()
     return render(request, 'home/create_voucher.html', {'form': form})
 
-def update_status(request):
+def update_status_view(request):
     clientes = DadosCliente.objects.exclude(pedido__status='6')
     clientes_to_update = []
     for cliente in clientes:

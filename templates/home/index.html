@@ -70,6 +70,7 @@
         <p class="card-category">Lista de clientes que utilizaram vouchers</p>
       </div>
       <div class="card-body">
+        <a class="btn btn-primary"href="{% url 'update_status_view' %}">Atualizar status</a>
         <form style="max-width: 180px;" id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
           {% for field in filter.form %}
             <div class="form-group">
