@@ -375,6 +375,8 @@ def create_client_and_assign_voucher(request):
     if not voucher:
         return JsonResponse({'error': 'Nenhum voucher disponível'}, status=404)
     voucher.is_valid = False
+    voucher.save()
+    print(voucher.is_valid)
     return JsonResponse({
         'id': voucher.id,
         'code': voucher.code,
