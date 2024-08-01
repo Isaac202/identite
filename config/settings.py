@@ -135,8 +135,17 @@ AWS_LOCATION = 'static'
 
 
 
-CELERY_BROKER_URL = config('REDIS_URL')
-CELERY_RESULT_BACKEND = config('REDIS_URL')
+# Configuração do broker do Celery
+CELERY_BROKER_URL = config('REDIS_URL', default='rediss://:p692991aed7efc668b23ccf12f64bbed75e51ab3f7e49fd5a5721a561b5ae3277@ec2-52-204-106-58.compute-1.amazonaws.com:23509')
+
+# Configuração do backend de resultados do Celery
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='rediss://:p692991aed7efc668b23ccf12f64bbed75e51ab3f7e49fd5a5721a561b5ae3277@ec2-52-204-106-58.compute-1.amazonaws.com:23509')
+
+# Outras configurações do Celery (opcionais)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 CPFCNPJ = config('CPFCNPJ')
 
 # settings.py

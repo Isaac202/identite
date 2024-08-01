@@ -7,11 +7,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from base.filters import DadosClienteFilter, VoucherFilter
+from base.task import update_status_celery,salvar_arquivos_cliente
 from .models import Agendamento, DadosCliente, Pedidos, Voucher
-from .utils import create_client_and_order, fetch_empresa_data, get_address_data,adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
+from .utils import create_client_and_order, get_address_data,adicionar_protocolo_e_hashvenda_no_pedido, agendar_pedido, consultar_status_pedido, generate_random_code, gerar_protocolo, obter_disponibilidade_agenda, salvar_venda, verifica_se_pode_videoconferecias
 from datetime import datetime
 from .forms import VoucherForm
-from django.utils.dateparse import parse_date
+import base64
+from django.core.files.base import ContentFile
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from rest_framework import viewsets
@@ -133,17 +135,25 @@ def form(request, slug=None):
             cliente.pedido.pedido = pedido
             cliente.pedido.save()
             cliente.save()
+            def encode_file_to_base64(file):
+                return base64.b64encode(file.read()).decode('utf-8')
+
+            rg_frente_b64 = None
+            rg_verso_b64 = None
+            cnh_b64 = None
 
             if "rg-frente" in request.FILES:
-                cliente.rg_frente.save(request.FILES["rg-frente"].name, request.FILES["rg-frente"])
-
-            if "rg-verso" in request.FILES:
-                cliente.rg_verso.save(request.FILES["rg-verso"].name, request.FILES["rg-verso"])
-
-            if "cnh" in request.FILES:
-                cliente.carteira_habilitacao.save(request.FILES["cnh"].name, request.FILES["cnh"])
+                rg_frente_b64 = encode_file_to_base64(request.FILES["rg-frente"])
                 
-            cliente.save()
+            if "rg-verso" in request.FILES:
+                rg_verso_b64 = encode_file_to_base64(request.FILES["rg-verso"])
+        
+            if "cnh" in request.FILES:
+                cnh_b64 = encode_file_to_base64(request.FILES["cnh"])
+
+            # Chama a tarefa Celery para salvar os arquivos
+            salvar_arquivos_cliente.delay(cliente.id, rg_frente_b64, rg_verso_b64, cnh_b64)
+    
             Voucher.objects.filter(code=slug).update(is_valid=False)
             return redirect('gerar_protocolo', pedido=pedido)
         else:
@@ -204,7 +214,11 @@ def agradecimento_orientacao(request):
 
 
 
-
+def get_key_by_value(dictionary, value):
+    for key, val in dictionary.items():
+        if val == value:
+            return key
+        
 def gerar_protocolo_view(request, pedido=None):
     dados_cliente = DadosCliente.objects.get(pedido__pedido=pedido)
     if request.method == 'POST':
@@ -261,19 +275,7 @@ def create_voucher(request):
     return render(request, 'home/create_voucher.html', {'form': form})
 
 def update_status_view(request):
-    clientes = DadosCliente.objects.exclude(pedido__status='6')
-    clientes_to_update = []
-    for cliente in clientes:
-        status, error = consultar_status_pedido(cliente.pedido.pedido)
-        status_dict = dict(Pedidos.STATUS_CHOICES)
-        if "StatusPedido" in status:
-            status_key = get_key_by_value(status_dict, status["StatusPedido"])
-            if cliente.pedido.status != status_key:
-                cliente.pedido.status = status_key
-                clientes_to_update.append(cliente.pedido)
-
-    # Atualiza todos os pedidos modificados de uma vez
-    Pedidos.objects.bulk_update(clientes_to_update, ['status'])
+    update_status_celery.delay()
 
     # Redireciona para a página anterior
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('painel')))
@@ -339,10 +341,7 @@ def delete_voucher(request, id):
     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 
-def get_key_by_value(dictionary, value):
-    for key, val in dictionary.items():
-        if val == value:
-            return key
+
 @csrf_exempt
 def update_status(request, pedido_id):
     if request.method == 'POST':

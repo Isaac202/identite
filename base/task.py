@@ -2,8 +2,15 @@ import logging
 import base64
 from celery import shared_task
 from django.core.files.base import ContentFile
-from .models import DadosCliente
 
+from base.utils import consultar_status_pedido
+from .models import DadosCliente, Pedidos
+
+
+def get_key_by_value(dictionary, value):
+    for key, val in dictionary.items():
+        if val == value:
+            return key
 logger = logging.getLogger('celery')
 
 @shared_task
@@ -36,3 +43,21 @@ def salvar_arquivos_cliente(id_cliente, rg_frente_b64=None, rg_verso_b64=None, c
     except Exception as e:
         logger.error("Erro ao salvar arquivos para o cliente %s: %s", id_cliente, str(e))
         raise
+
+    
+@shared_task
+def update_status_celery():
+    clientes = DadosCliente.objects.filter(pedido__status='5')
+    print(clientes.count())
+    clientes_to_update = []
+    for cliente in clientes:
+        status, error = consultar_status_pedido(cliente.pedido.pedido)
+        status_dict = dict(Pedidos.STATUS_CHOICES)
+        if "StatusPedido" in status:
+            status_key = get_key_by_value(status_dict, status["StatusPedido"])
+            if cliente.pedido.status != status_key:
+                cliente.pedido.status = status_key
+                clientes_to_update.append(cliente.pedido)
+
+    # Atualiza todos os pedidos modificados de uma vez
+    Pedidos.objects.bulk_update(clientes_to_update, ['status'])
