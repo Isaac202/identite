@@ -113,7 +113,7 @@ def obter_disponibilidade_agenda():
     payload = {
        "apiKey": API_KEY,
         "DataInicial": "2024-06-27",
-        "DataFinal": "2024-07-29",
+        "DataFinal": "2024-08-29",
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     }
 
@@ -152,7 +152,6 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
     
 def create_client_and_order(cnpj, voucher):
     # Obter dados da empresa pelo CNPJ
-    print(voucher)
     cnpj = cnpj.replace(".", "").replace("-", "").replace("/", "")
     empresa_data = fetch_empresa_data(cnpj)
     if not empresa_data:
@@ -263,6 +262,7 @@ def fetch_empresa_data(cnpj):
     CPFCNPJ_API_KEY = settings.CPFCNPJ
     if cnpj and len(cnpj) == 14:
         response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
+        print(response.text)
         if response.status_code == 200:
             data = response.json()
             return {
