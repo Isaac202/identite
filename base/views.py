@@ -161,7 +161,7 @@ def form(request, slug=None):
             create_client_and_order(cnpj, slug)
             return redirect(request.path)
         
-        cliente = DadosCliente.objects.get(voucher__code=slug)
+        cliente = DadosCliente.objects.filter(voucher__code=slug).first()
 
         if request.POST["nomeCompleto"].strip():
             cliente.nome_completo = request.POST["nomeCompleto"]
