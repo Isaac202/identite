@@ -159,6 +159,7 @@ def create_client_and_order(cnpj, voucher):
     
     # Obter dados de endereço pelo CEP
     cep = empresa_data.get('cep')
+    cep = cep.replace(".", "").replace("-", "").replace(" ", "")
     endereco_data = get_address_data(cep)
     if not endereco_data:
         return None, {'error': 'Dados de endereço não encontrados'}, 404
@@ -262,7 +263,6 @@ def fetch_empresa_data(cnpj):
     CPFCNPJ_API_KEY = settings.CPFCNPJ
     if cnpj and len(cnpj) == 14:
         response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
-        print(response.text)
         if response.status_code == 200:
             data = response.json()
             return {

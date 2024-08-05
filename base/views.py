@@ -13,6 +13,8 @@ from .utils import create_client_and_order, get_address_data,adicionar_protocolo
 from datetime import datetime
 from .forms import VoucherForm
 import base64
+from .forms import EmpresaForm
+from .utils import fetch_empresa_data, get_address_data
 from django.core.files.base import ContentFile
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -75,6 +77,42 @@ class DadosClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]  # Adicione esta linha
 
 
+def empresa_form_view(request):
+    if request.method == 'POST':
+        form = EmpresaForm(request.POST)
+        if form.is_valid():
+            # Processa os dados do formulário
+            cnpj = form.cleaned_data['cnpj']
+            voucher = form.cleaned_data['voucher']
+            empresa_data = fetch_empresa_data(cnpj)
+            if not empresa_data:
+                form.add_error('cnpj', 'Dados da empresa não encontrados.')
+            else:
+                cep = empresa_data.get('cep')
+                endereco_data = get_address_data(cep)
+                if not endereco_data:
+                    form.add_error('cep', 'Dados de endereço não encontrados.')
+                else:
+                    # Preencher o formulário com os dados da empresa e do endereço
+                    form = EmpresaForm(initial={
+                        'cnpj': cnpj,
+                        'voucher': voucher,
+                        'nome_completo': empresa_data.get('razao'),
+                        'nome_fantasia': empresa_data.get('fantasia'),
+                        'razao_social': empresa_data.get('razao'),
+                        'cep': cep,
+                        'logradouro': endereco_data.get('logradouro'),
+                        'complemento': endereco_data.get('complemento'),
+                        'bairro': endereco_data.get('bairro'),
+                        'numero': 'SN',
+                        'cidade': endereco_data.get('localidade'),
+                        'uf': endereco_data.get('uf'),
+                        'cod_ibge': endereco_data.get('ibge'),
+                    })
+    else:
+        form = EmpresaForm()
+    
+    return render(request, 'empresa_form.html', {'form': form})
 
     
 def check_voucher(request):
@@ -88,11 +126,14 @@ def check_voucher(request):
                 print(cliente)
                 return render(request, 'invalid.html')
             else:
-                create_client_and_order(cnpj, code)
+                cliente_criaddo, erro1, erro2 =create_client_and_order(cnpj, code)
+                print("DADOS",cliente_criaddo, erro1, erro2)
                 return redirect('form', slug=code)
         except DadosCliente.DoesNotExist:
             
             create_client_and_order(cnpj, code)
+            cliente_criaddo, erro1, erro2 =create_client_and_order(cnpj, code)
+            print("DADOS",cliente_criaddo, erro1, erro2)
             return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
