@@ -8,12 +8,14 @@ admin.site.register(Pedidos)
 
 
 class DadosClienteAdmin(admin.ModelAdmin):
-    list_display = ['nome_completo', 'get_pedido', 'get_status','cpf', 'cnpj', 'created_at', 'updated_at']
-    search_fields = ['nome_completo', 'cpf', 'cnpj']
+    list_display = ['nome_completo', 'get_pedido', 'get_status','voucher','cpf', 'cnpj', 'created_at', 'updated_at']
+    search_fields = ['nome_completo', 'cpf', 'cnpj', 'voucher']
     list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
-
+    
     def get_pedido(self, obj):
         return obj.pedido.pedido
+   
+    
     def get_status(self, obj):
       return obj.pedido.get_status_display()
     get_pedido.short_description = 'Pedido'  # Define um título para a coluna
