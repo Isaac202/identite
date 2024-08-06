@@ -2,14 +2,15 @@ from django.contrib import admin
 from .models import DadosCliente, Pedidos, Voucher
 from django.db.models import Count
 
-admin.site.register(Voucher)
 admin.site.register(Pedidos)
 
-
+class VoucherAdmin(admin.ModelAdmin):
+    search_fields= ['code']
+    list_display = ['code','is_valid']
 
 class DadosClienteAdmin(admin.ModelAdmin):
     list_display = ['nome_completo', 'get_pedido', 'get_status','voucher','cpf', 'cnpj', 'created_at', 'updated_at']
-    search_fields = ['nome_completo', 'cpf', 'cnpj', 'voucher']
+    search_fields = ['nome_completo', 'cpf', 'cnpj', 'voucher__code']
     list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
     
     def get_pedido(self, obj):
@@ -35,3 +36,4 @@ class DadosClienteAdmin(admin.ModelAdmin):
         return super(DadosClienteAdmin, self).changelist_view(request, extra_context=extra_context)
 
 admin.site.register(DadosCliente, DadosClienteAdmin)
+admin.site.register(Voucher,VoucherAdmin)
