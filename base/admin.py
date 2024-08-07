@@ -9,8 +9,8 @@ class VoucherAdmin(admin.ModelAdmin):
     list_display = ['code','is_valid']
 
 class DadosClienteAdmin(admin.ModelAdmin):
-    list_display = ['nome_completo', 'get_pedido', 'get_status','voucher','cpf', 'cnpj', 'created_at', 'updated_at']
-    search_fields = ['nome_completo', 'cpf', 'cnpj', 'voucher__code']
+    list_display = ['nome_completo', 'get_pedido', 'get_protocolo', 'get_status','voucher','cpf', 'cnpj', 'created_at', 'updated_at']
+    search_fields = ['nome_completo','pedido__pedido' ,'cpf', 'cnpj', 'voucher__code']
     list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
     
     def get_pedido(self, obj):
@@ -19,6 +19,9 @@ class DadosClienteAdmin(admin.ModelAdmin):
     
     def get_status(self, obj):
       return obj.pedido.get_status_display()
+    def get_protocolo(self, obj):
+        return obj.pedido.protocolo
+    get_protocolo.short_description = 'Protocolo'
     get_pedido.short_description = 'Pedido'  # Define um título para a coluna
     get_status.short_description = 'Status'  # Define um título para a coluna
     def changelist_view(self, request, extra_context=None):

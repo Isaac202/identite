@@ -123,17 +123,11 @@ def check_voucher(request):
         try:
             cliente = DadosCliente.objects.get(voucher__code=code)
             if cliente.pedido.protocolo:
-                print(cliente)
                 return render(request, 'invalid.html')
             else:
-                cliente_criaddo, erro1, erro2 =create_client_and_order(cnpj, code)
-                print("DADOS",cliente_criaddo, erro1, erro2)
                 return redirect('form', slug=code)
         except DadosCliente.DoesNotExist:
-            
             create_client_and_order(cnpj, code)
-            cliente_criaddo, erro1, erro2 =create_client_and_order(cnpj, code)
-            print("DADOS",cliente_criaddo, erro1, erro2)
             return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
