@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Formulário de Empresa</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hidden {
+            display: none;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2 class="mt-5">Informações da Empresa</h2>
+        <p>Valor do Voucher: {{ voucher }}</p>
+        <form id="empresaForm" method="post" action="{% url 'atualizar_empresa' voucher=voucher %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="cnpj">CNPJ</label>
+                <input type="text" class="form-control" id="cnpj" name="cnpj" placeholder="Cnpj" required>
+            </div>
+            <div class="form-group">
+                <label for="razaoSocial">Razão Social</label>
+                <input type="text" class="form-control" id="razaoSocial" name="razaoSocial" placeholder="Razão Social" required>
+            </div>
+
+            <div class="form-group">
+                <label for="nomeFantasia">Nome Fantasia</label>
+                <input type="text" class="form-control" id="nomeFantasia" name="nomeFantasia" placeholder="Nome Fantasia" required>
+            </div>
+
+            <div class="form-group">
+                <label for="cep">CEP</label>
+                <input type="text" class="form-control" id="cep" name="cep" placeholder="00000-000" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#cep').mask('00000-000'); // Máscara para o CEP
+            $('#cnpj').mask('00.000.000/0000-00', {
+                reverse: true
+            });
+            $('#cep').change(function() {
+                var cep = $(this).val().replace('-', '');
+                if (cep.length == 8) {
+                    $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data) {
+                        if (!("erro" in data)) {
+                            // Aqui você pode preencher automaticamente campos adicionais se necessário
+                            // Exemplo: $('input[name="logradouro"]').val(data.logradouro);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

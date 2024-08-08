@@ -127,7 +127,11 @@ def check_voucher(request):
             else:
                 return redirect('form', slug=code)
         except DadosCliente.DoesNotExist:
-            create_client_and_order(cnpj, code)
+            print("Linha 31")
+            
+            cliente_get =create_client_and_order(cnpj, code)
+            if not cliente_get:
+                return redirect('atualizar_empresa', voucher=code)
             return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
         except DadosCliente.MultipleObjectsReturned:
             return render(request, 'invalid.html')
@@ -418,7 +422,62 @@ def create_client_and_assign_voucher(request):
     }, status=200)
 
 
+def atualizar_empresa(request, voucher):
+    voucher = str(voucher)
+    if request.method == 'POST':
+        # Captura os dados do formulário diretamente do request.POST
+        print("POST",voucher)
+        nome_fantasia = request.POST.get('nomeFantasia')
+        razao_social = request.POST.get('razaoSocial')
+        cnpj = request.POST.get('cnpj')
+        cep = request.POST.get('cep')
+        cep = cep.replace(".", "").replace("-", "").replace(" ", "")
+        cnpj = cnpj.replace(".", "").replace("-", "").replace(" ", "").replace("/","")
+        endereco_data = get_address_data(cep)
+        # Realiza a validação dos dados (exemplo básico)
+        errors = []
+        if not cnpj or not cep:
+            errors.append('Campos obrigatórios não preenchidos.')
+        if len(cnpj) != 14:
+            errors.append('CNPJ inválido.')
+        if len(cep) != 8 or not cep.isdigit():
+            errors.append('CEP inválido.')
+        
+        if errors:
+          
+            return render(request, 'empresa.html', {'errors': errors,"voucher": voucher})
+        
+        voucher = Voucher.objects.get(code=voucher)
+        
+        # Criar um novo pedido
+        novo_pedido = Pedidos(
+            pedido=generate_random_code(),  # Você pode ajustar como deseja gerar o código do pedido
+            status='13'  # Atribuído a Voucher
+        )
+        novo_pedido.save()
+        # Cria ou atualiza a instância do modelo
+        dados_cliente = DadosCliente(
+            nome_fantasia=nome_fantasia,
+            razao_social=razao_social,
+            cnpj=cnpj,
+            cep=cep,
+            logradouro = endereco_data.get('logradouro') or 'N/A',
+            complemento = endereco_data.get('complemento', ''),
+            bairro = endereco_data.get('bairro') or 'N/A',
+            cidade = endereco_data.get('localidade') or 'N/A',
+            uf = endereco_data.get('uf') or 'N/A',
+            cod_ibge = endereco_data.get('ibge') or 'N/A',
+            numero = 'SN',
+            voucher=voucher,  # Associa o voucher recebido na URL
+            pedido=novo_pedido,  # Associar o pedido ao cliente
+        )
+        dados_cliente.save()
+        
+        # Redireciona para uma página de sucesso ou exibe uma mensagem
+        return redirect('form', slug=voucher.code)  # Substitua 'pagina_sucesso' pelo nome da URL da sua página de sucesso
 
+    if request.method == 'GET':
+        return render(request, 'empresa.html', {"voucher": voucher})
 def handler404(request, exception, *args, **argv):
     return render(request, '404.html', status=404)
 

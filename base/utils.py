@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 import requests
 import json
 from cryptography.fernet import Fernet
@@ -154,8 +155,10 @@ def create_client_and_order(cnpj, voucher):
     # Obter dados da empresa pelo CNPJ
     cnpj = cnpj.replace(".", "").replace("-", "").replace("/", "")
     empresa_data = fetch_empresa_data(cnpj)
+
     if not empresa_data:
-        return None, {'error': 'Dados da empresa não encontrados'}, 404
+       
+        return None
     
     # Obter dados de endereço pelo CEP
     cep = empresa_data.get('cep')
@@ -265,6 +268,8 @@ def fetch_empresa_data(cnpj):
         response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
         if response.status_code == 200:
             data = response.json()
+            if "erro" in data:
+                return None
             return {
                 'razao': data.get('razao'),
                 'fantasia': data.get('fantasia'),
