@@ -28,7 +28,6 @@
 <body>
     <div class="container">
         <h2 class="mt-5">Informações da Empresa</h2>
-        <p>Valor do Voucher: {{ voucher }}</p>
         <form id="empresaForm" method="post" action="{% url 'atualizar_empresa' voucher=voucher %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
