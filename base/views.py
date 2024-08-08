@@ -444,7 +444,7 @@ def atualizar_empresa(request, voucher):
             errors.append('CEP inválido.')
         
         if errors:
-          
+            print(errors)
             return render(request, 'empresa.html', {'errors': errors,"voucher": voucher})
         
         voucher = Voucher.objects.get(code=voucher)
