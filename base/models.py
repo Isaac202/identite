@@ -45,9 +45,9 @@ class Pedidos(BaseModel):
         ('7', 'Revogada'),
         ('8', 'Em Verificação'),
         ('9', 'Em Validação'),
-        ('11', 'Recusada'),
-        ('12', 'Cancelada'),
-        ('13', 'Atribuído a Voucher')  # Novo status adicionado aqui
+        ('10', 'Recusada'),
+        ('11', 'Cancelada'),
+        ('12', 'Atribuído a Voucher')  # Novo status adicionado aqui
     ]
 
     pedido = models.CharField(max_length=255, blank=True, null=True)

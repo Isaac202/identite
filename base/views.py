@@ -156,7 +156,9 @@ def form(request, slug=None):
     if request.method == 'POST':
         if "cnpj" in request.POST and request.POST["cnpj"].strip():
             cnpj = request.POST["cnpj"]
-            create_client_and_order(cnpj, slug)
+            cliente_get =create_client_and_order(cnpj, slug)
+            if not cliente_get:
+                return redirect('atualizar_empresa', voucher=slug)
             return redirect(request.path)
         
         cliente = DadosCliente.objects.filter(voucher__code=slug).first()
