@@ -67,12 +67,16 @@ alert("{{ mensagem }}");
 {% if erros %}
 <script>
     {% for erro in erros %}
-        alert("{{ erro.ErrorDescription }}");
+        {% if "24 - O CNPJ informado se encontra na situação cadastral de INAPTO nas bases de dados da RFB.Emissão do certificado não permitida." in erro.ErrorDescription %}
+            alert("O CNPJ informado está inapto. Você será redirecionado para nosso suporte.");
+            window.location.href = "https://s12.chatguru.app/_/comercial";
+        {% else %}
+            alert("{{ erro.ErrorDescription }}");
+        {% endif %}
     {% endfor %}
- 
-   
 </script>
 {% endif %}
+
 {% if erro_protocolo %}
 <script>
         alert("{{ erro_protocolo }}"); 
