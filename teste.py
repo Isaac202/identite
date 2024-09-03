@@ -26,7 +26,7 @@ status_dict = {
 }
 
 def update_status_celery():
-    clientes = DadosCliente.objects.all()
+    clientes = DadosCliente.objects.filter(pedido__status='5')
     print(clientes.count())
     clientes_to_update = []
     for cliente in clientes:
