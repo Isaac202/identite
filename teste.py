@@ -1,5 +1,6 @@
 import os
 import django
+from datetime import datetime
 
 # Defina a variável de ambiente
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # Altere 'seu_projeto' para o nome do seu projeto
@@ -10,6 +11,10 @@ django.setup()
 from base.models import DadosCliente, Pedidos
 from base.task import get_key_by_value
 from base.utils import consultar_status_pedido
+
+# Intervalo de datas
+data_inicio = datetime(2024, 9, 1)
+data_fim = datetime(2024, 9, 25)
 status_dict = {
     '1': 'Não Confirmada',
     '2': 'Solicitação de Estorno',
@@ -26,7 +31,12 @@ status_dict = {
 }
 
 def update_status_celery():
-    clientes = DadosCliente.objects.filter(pedido__status='5')
+    # Filtra clientes com status 5 e que foram atualizados entre as datas especificadas
+    clientes = DadosCliente.objects.filter(
+       
+        updated_at__gte=data_inicio,
+        updated_at__lte=data_fim
+    )
     print(clientes.count())
     clientes_to_update = []
     for cliente in clientes:

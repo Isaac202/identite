@@ -436,7 +436,8 @@ def atualizar_empresa(request, voucher):
         cep = cep.replace(".", "").replace("-", "").replace(" ", "")
         cnpj = cnpj.replace(".", "").replace("-", "").replace(" ", "").replace("/","")
         endereco_data = get_address_data(cep)
-        # Realiza a validação dos dados (exemplo básico)
+        
+        # Validação básica dos dados
         errors = []
         if not cnpj or not cep:
             errors.append('Campos obrigatórios não preenchidos.')
@@ -447,39 +448,48 @@ def atualizar_empresa(request, voucher):
         
         if errors:
             print(errors)
-            return render(request, 'empresa.html', {'errors': errors,"voucher": voucher})
+            return render(request, 'empresa.html', {'errors': errors, "voucher": voucher})
         
-        voucher = Voucher.objects.get(code=voucher)
-        
-        # Criar um novo pedido
+        # Obtém o objeto voucher
+        try:
+            voucher = Voucher.objects.get(code=voucher)
+        except Voucher.DoesNotExist:
+            errors.append('Voucher não encontrado.')
+            return render(request, 'empresa.html', {'errors': errors, "voucher": voucher})
+
+        # Cria um novo pedido
         novo_pedido = Pedidos(
-            pedido=generate_random_code(),  # Você pode ajustar como deseja gerar o código do pedido
-            status='13'  # Atribuído a Voucher
+            pedido=generate_random_code(),  # Gere um código aleatório para o pedido
+            status='13'  # Status atribuído ao Voucher
         )
         novo_pedido.save()
-        # Cria ou atualiza a instância do modelo
-        dados_cliente = DadosCliente(
-            nome_fantasia=nome_fantasia,
-            razao_social=razao_social,
-            cnpj=cnpj,
-            cep=cep,
-            logradouro = endereco_data.get('logradouro') or 'N/A',
-            complemento = endereco_data.get('complemento', ''),
-            bairro = endereco_data.get('bairro') or 'N/A',
-            cidade = endereco_data.get('localidade') or 'N/A',
-            uf = endereco_data.get('uf') or 'N/A',
-            cod_ibge = endereco_data.get('ibge') or 'N/A',
-            numero = 'SN',
-            voucher=voucher,  # Associa o voucher recebido na URL
-            pedido=novo_pedido,  # Associar o pedido ao cliente
+
+        # Cria ou atualiza o objeto DadosCliente associado ao voucher
+        dados_cliente, created = DadosCliente.objects.update_or_create(
+            voucher=voucher,  # Filtra pelo voucher
+            defaults={  # Define os dados que devem ser atualizados ou criados
+                'nome_fantasia': nome_fantasia,
+                'razao_social': razao_social,
+                'cnpj': cnpj,
+                'cep': cep,
+                'logradouro': endereco_data.get('logradouro') or 'N/A',
+                'complemento': endereco_data.get('complemento', ''),
+                'bairro': endereco_data.get('bairro') or 'N/A',
+                'cidade': endereco_data.get('localidade') or 'N/A',
+                'uf': endereco_data.get('uf') or 'N/A',
+                'cod_ibge': endereco_data.get('ibge') or 'N/A',
+                'numero': 'SN',
+                'pedido': novo_pedido,  # Associa o novo pedido
+            }
         )
-        dados_cliente.save()
-        
-        # Redireciona para uma página de sucesso ou exibe uma mensagem
-        return redirect('form', slug=voucher.code)  # Substitua 'pagina_sucesso' pelo nome da URL da sua página de sucesso
+
+        # Redireciona para a página de sucesso
+        return redirect('form', slug=voucher.code)
 
     if request.method == 'GET':
         return render(request, 'empresa.html', {"voucher": voucher})
+
+
 def handler404(request, exception, *args, **argv):
     return render(request, '404.html', status=404)
 
