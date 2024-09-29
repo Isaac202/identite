@@ -1,174 +1,150 @@
 {% extends "layouts/base.html" %}
+{% load static %}
 
 {% block title %}Dashboard{% endblock %}
 
 {% block stylesheets %}
-<style>
-  .voucher-code {
-    cursor: pointer;
-  }
-</style>
+<!-- Seus estilos específicos aqui, se houver -->
 {% endblock stylesheets %}
 
 {% block content %}
-<div class="row">
-  <div class="col-lg-3 col-md-6 col-sm-6">
-    <div class="card card-stats">
-      <div class="card-header card-header-warning card-header-icon">
-        <div class="card-icon">
-          <i class="fa fa-user"></i>
-        </div>
-        <p class="card-category">Clientes com Vouchers</p>
-        <h3 class="card-title">{{ total_clients }}</h3>
-      </div>
-      <div class="card-footer">
-        <div class="stats">
-          <i class="material-icons">update</i> Atualizado agora
-        </div>
-      </div>
+<div class="container-fluid">
+    <!-- Seu conteúdo HTML aqui -->
+    <div id="loading" style="display: none;">Carregando...</div>
+    <div id="voucher-table-container">
+        <!-- A tabela será carregada aqui -->
     </div>
-  </div>
-  <div class="col-lg-3 col-md-6 col-sm-6">
-    <div class="card card-stats">
-      <div class="card-header card-header-success card-header-icon">
-        <div class="card-icon">
-          <i class="fa fa-check"></i>
-        </div>
-        <p class="card-category">Vouchers Ativos</p>
-        <h3 class="card-title">{{ active_vouchers }}</h3>
-      </div>
-      <div class="card-footer">
-        <div class="stats">
-          <i class="material-icons">update</i> Atualizado agora
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-3 col-md-6 col-sm-6">
-    <div class="card card-stats">
-      <div class="card-header card-header-danger card-header-icon">
-        <div class="card-icon">
-          <i class="fa fa-times"></i>
-        </div>
-        <p class="card-category">Vouchers Inativos</p>
-        <h3 class="card-title">{{ inactive_vouchers }}</h3>
-      </div>
-      <div class="card-footer">
-        <div class="stats">
-          <i class="material-icons">update</i> Atualizado agora
-        </div>
-      </div>
-    </div>
-  </div>
+    <nav aria-label="Paginação">
+        <ul class="pagination" id="pagination">
+            <!-- A paginação será carregada aqui -->
+        </ul>
+    </nav>
 </div>
-
-<div class="row">
-  <div class="col-md-12">
-    <div class="card">
-      <div class="card-header card-header-primary">
-        <h4 class="card-title">Clientes com Vouchers</h4>
-        <p class="card-category">Lista de clientes que utilizaram vouchers</p>
-      </div>
-      <div class="card-body">
-        <a class="btn btn-primary"href="{% url 'update_status_view' %}">Atualizar status</a>
-        <form style="max-width: 180px;" id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
-          {% for field in filter.form %}
-            <div class="form-group">
-              {% if field.name == "start_date" %}
-                <label for="{{ field.auto_id }}">Data de início:</label>
-              {% elif field.name == "end_date" %}
-                <label for="{{ field.auto_id }}">Data de término:</label>
-              {% else %}
-                <label for="{{ field.auto_id }}">{{ field.label }}</label>
-              {% endif %}
-              {% if field.name == "start_date" or field.name == "end_date" %}
-                <input type="date" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% else %}
-                <input type="{{ field.field.widget.input_type }}" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% endif %}
-            </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary">Aplicar filtros</button>
-        </form>
-        <div class="table-responsive">
-          <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
-          <table class="table">
-            <thead class="text-primary">
-              <th>ID</th>
-              <th>Nome Completo</th>
-              <th>Protocolo</th>
-              <th>Pedido</th>
-              <th>CNPJ</th>
-              <th>Telefone</th>
-              <th>Código do Voucher</th>
-              <th>Status</th>
-              <th>Data</th>
-            </thead>
-            <tbody id="voucher-table-body">
-              {% for cliente in clients_with_vouchers %}
-              <tr data-id="{{ cliente.voucher.id }}">
-                <td>{{ cliente.id|default:"Não disponível" }}</td>
-                <td>{{ cliente.nome_completo|default:"Não disponível" }}</td>
-                <td>{{ cliente.pedido.protocolo|default:"Ainda não gerado pelo cliente" }}</td>
-                <td>{{ cliente.pedido.pedido|default:"Não disponível" }}</td>
-                <td>{{ cliente.cnpj|default:"Não disponível" }}</td>
-                <td>{{ cliente.telefone|default:"Não disponível" }}</td>
-                <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code|default:"Não disponível" }}</td>
-                <td>{{ cliente.pedido.get_status_display|default:"Não disponível" }}</td>
-                <td>{{ cliente.created_at|default:"Não disponível" }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-
-  const csrftoken = getCookie('csrftoken');
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('search-input');
-
-    function attachEventListeners(row) {
-      row.querySelector('.voucher-code').addEventListener('click', function() {
-        const code = this.innerText;
-        navigator.clipboard.writeText(code).then(() => {
-          alert('Código copiado: ' + code);
-        }).catch(err => {
-          console.error('Erro ao copiar o código: ', err);
-        });
-      });
-    }
-
-    searchInput.addEventListener('input', function() {
-      const query = this.value.toLowerCase();
-      document.querySelectorAll('#voucher-table-body tr').forEach(row => {
-        const code = row.cells[4].innerText.toLowerCase(); // index 4 for Código do Voucher
-        row.style.display = code.includes(query) ? '' : 'none';
-      });
-    });
-
-    document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
-  });
-</script>
 {% endblock content %}
 
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded');
+        loadPage(1);
+
+        const paginationElement = document.getElementById('pagination');
+        if (paginationElement) {
+            paginationElement.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    e.preventDefault();
+                    const page = e.target.getAttribute('data-page');
+                    console.log('Pagination clicked, loading page:', page);
+                    loadPage(page);
+                }
+            });
+        } else {
+            console.error('Pagination element not found');
+        }
+
+        const filterForm = document.getElementById('filter-form');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log('Filter form submitted');
+                loadPage(1);
+            });
+        } else {
+            console.log('Filter form not found, skipping event listener');
+        }
+    });
+
+    function loadPage(page) {
+        console.log('loadPage function called with page:', page);
+        const loading = document.getElementById('loading');
+        const container = document.getElementById('voucher-table-container');
+        const filterForm = document.getElementById('filter-form');
+
+        if (!container) {
+            console.error('Voucher table container not found');
+            return;
+        }
+
+        if (loading) loading.style.display = 'block';
+
+        let url = '{% url "painel" %}?page=' + page;
+        if (filterForm) {
+            const formData = new FormData(filterForm);
+            url += '&' + new URLSearchParams(formData).toString();
+        }
+        console.log('Fetching URL:', url);
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received data:', data);
+            if (data.html) {
+                container.innerHTML = data.html;
+                if (data.pagination) {
+                    updatePagination(data.pagination);
+                } else {
+                    console.error('No pagination data in the response');
+                }
+            } else {
+                console.error('No HTML content in the response');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        })
+        .finally(() => {
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        });
+    }
+
+    function updatePagination(paginationData) {
+        console.log('Updating pagination with data:', paginationData);
+        const paginationElement = document.getElementById('pagination');
+        if (!paginationElement) {
+            console.error('Pagination element not found');
+            return;
+        }
+
+        let paginationHtml = '';
+
+        if (paginationData.has_previous) {
+            paginationHtml += `<li class="page-item">
+                <a class="page-link" href="#" data-page="${paginationData.previous_page_number}" aria-label="Anterior">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>`;
+        }
+
+        for (let i = paginationData.page_range[0]; i <= paginationData.page_range[1]; i++) {
+            if (i === paginationData.current_page) {
+                paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+            }
+        }
+
+        if (paginationData.has_next) {
+            paginationHtml += `<li class="page-item">
+                <a class="page-link" href="#" data-page="${paginationData.next_page_number}" aria-label="Próximo">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>`;
+        }
+
+        paginationElement.innerHTML = paginationHtml;
+    }
+</script>
+{% endblock javascripts %}

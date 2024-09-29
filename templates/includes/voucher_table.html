@@ -1,0 +1,36 @@
+<div class="table-responsive">
+    <table class="table" aria-label="Tabela de clientes com vouchers">
+        <thead class="text-primary">
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Nome Completo</th>
+                <th scope="col">Protocolo</th>
+                <th scope="col">Pedido</th>
+                <th scope="col">CNPJ</th>
+                <th scope="col">Telefone</th>
+                <th scope="col">Código do Voucher</th>
+                <th scope="col">Status</th>
+                <th scope="col">Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente in dados_paginados %}
+            <tr data-id="{{ cliente.voucher.id }}">
+                <td>{{ cliente.id|default:"Não disponível" }}</td>
+                <td>{{ cliente.nome_completo|default:"Não disponível" }}</td>
+                <td>{{ cliente.pedido.protocolo|default:"Ainda não gerado pelo cliente" }}</td>
+                <td>{{ cliente.pedido.pedido|default:"Não disponível" }}</td>
+                <td>{{ cliente.cnpj|default:"Não disponível" }}</td>
+                <td>{{ cliente.telefone|default:"Não disponível" }}</td>
+                <td class="voucher-code" role="button" tabindex="0">{{ cliente.voucher.code|default:"Não disponível" }}</td>
+                <td>{{ cliente.pedido.get_status_display|default:"Não disponível" }}</td>
+                <td>{{ cliente.created_at|default:"Não disponível" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9">Nenhum cliente encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

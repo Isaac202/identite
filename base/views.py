@@ -28,7 +28,16 @@ from .models import Voucher, Lote
 import requests
 from rest_framework import status
 from django.conf import settings
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.db.models import Count, Q
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 
 API_KEY = 'e9f1c3b7d2f44a3294d3b1e3429f6a75'
@@ -298,10 +307,28 @@ def gerar_protocolo_view(request, pedido=None):
 
 
 @login_required
+@cache_page(60 * 15)  # Cache por 15 minutos
 def list_vouchers(request):
-    voucher_list = Voucher.objects.filter(is_valid=True)
+    voucher_list = Voucher.objects.filter(is_valid=True).select_related('lote')
     voucher_filter = VoucherFilter(request.GET, queryset=voucher_list)
-    return render(request, 'home/listar_voucher.html', {'filter': voucher_filter})
+    
+    paginator = Paginator(voucher_filter.qs, 20)
+    page = request.GET.get('page')
+    
+    try:
+        vouchers = paginator.page(page)
+    except PageNotAnInteger:
+        vouchers = paginator.page(1)
+    except EmptyPage:
+        vouchers = paginator.page(paginator.num_pages)
+    
+    context = {'filter': voucher_filter, 'vouchers': vouchers}
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('includes/voucher_table.html', context, request=request)
+        return HttpResponse(html)
+    
+    return render(request, 'home/listar_voucher.html', context)
 
 
 @login_required
@@ -322,22 +349,51 @@ def update_status_view(request):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('painel')))
 @login_required
 def voucher_statistics(request):
+    logger.debug("voucher_statistics view called")
+    
+    dados_cliente_all = DadosCliente.objects.filter(voucher__isnull=False).order_by('-voucher__created_at')
+    logger.debug(f"Total de clientes com vouchers: {dados_cliente_all.count()}")
 
-    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher').order_by('-created_at'))
-    clients_with_vouchers = dados_cliente_filter.qs
-    all_voucher = Voucher.objects.all()
-    total_clients = clients_with_vouchers.distinct().count()
-    active_vouchers = all_voucher.filter(is_valid=True).count()
-    inactive_vouchers = all_voucher.filter(is_valid=False).count()
+    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=dados_cliente_all)
+    
+    page = request.GET.get('page', 1)
+    paginator = Paginator(dados_cliente_filter.qs, 20)  # 20 itens por página
+    
+    try:
+        dados_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        dados_paginados = paginator.page(1)
+    except EmptyPage:
+        dados_paginados = paginator.page(paginator.num_pages)
 
+    logger.debug(f"Total de itens: {paginator.count}")
+    logger.debug(f"Número de páginas: {paginator.num_pages}")
+    logger.debug(f"Página atual: {dados_paginados.number}")
+    logger.debug(f"Itens na página atual: {len(dados_paginados)}")
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        logger.debug("AJAX request received")
+        html = render_to_string('includes/voucher_table.html', {'dados_paginados': dados_paginados})
+        pagination_data = {
+            'has_previous': dados_paginados.has_previous(),
+            'has_next': dados_paginados.has_next(),
+            'previous_page_number': dados_paginados.previous_page_number() if dados_paginados.has_previous() else None,
+            'next_page_number': dados_paginados.next_page_number() if dados_paginados.has_next() else None,
+            'current_page': dados_paginados.number,
+            'page_range': [max(1, dados_paginados.number - 2), min(paginator.num_pages, dados_paginados.number + 2)],
+        }
+        return JsonResponse({
+            'html': html,
+            'pagination': pagination_data,
+        })
+
+    logger.debug("Rendering full page")
     context = {
         'filter': dados_cliente_filter,
-        'total_clients': total_clients,
-        'active_vouchers': active_vouchers,
-        'inactive_vouchers': inactive_vouchers,
-        'clients_with_vouchers': clients_with_vouchers,
+        'active_vouchers': Voucher.objects.filter(is_valid=True).count(),
+        'inactive_vouchers': Voucher.objects.filter(is_valid=False).count(),
+        'total_vouchers': Voucher.objects.count(),
     }
-
     return render(request, 'home/index.html', context)
 
 

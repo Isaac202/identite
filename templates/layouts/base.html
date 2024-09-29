@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="{% static 'assets/img/logo.png' %}">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <link rel="canonical" href="https://appseed.us/admin-dashboards/django-dashboard-material">
-
+  <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css">
   <title>
     CONSULTI - {% block title %}{% endblock %}
   </title>
@@ -55,8 +55,28 @@
   {% include 'includes/scripts.html' %}
   {% include 'includes/scripts-sidebar.html' %}
   
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js"></script>
+  <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js"></script>
+  <script src="{% static 'assets/js/material-dashboard.js' %}?v=2.1.2"></script>
+  <script>
+    $(document).ready(function() {
+      $('body').bootstrapMaterialDesign();
+    });
+  </script>
+  
   <!-- Specific Page JS goes HERE  -->
-  {% block javascripts %}{% endblock javascripts %}
+  {% block javascripts %}
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js"></script>
+  <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js"></script>
+  <script src="{% static 'assets/js/material-dashboard.js' %}?v=2.1.2"></script>
+  <script>
+    $(document).ready(function() {
+      $('body').bootstrapMaterialDesign();
+    });
+  </script>
+  {% endblock javascripts %}
   
 </body>
 </html>

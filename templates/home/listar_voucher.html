@@ -1,4 +1,3 @@
-
 {% extends "layouts/base.html" %}
 
 {% block title %}UI Tables{% endblock %}
@@ -6,61 +5,38 @@
 {% block stylesheets %}{% endblock stylesheets %}
 
 {% block content %}
-<button id="AddVoucherModalBTN" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#AddVoucherModal">
-  Adicionar Voucher
-</button>
 <div class="row">
   <div class="col-md-12">
     <div class="card">
       <div class="card-header card-header-primary">
-        <h4 class="card-title ">Tabela de Vouchers</h4>
-        <p class="card-category">Aqui estão todos os vouchers cadastrados</p>
+        <h4 class="card-title">Lista de Vouchers</h4>
       </div>
       <div class="card-body">
-        <form style="max-width: 180px;" method="get" class="mb-3">
-          {% for field in filter.form %}
-            <div class="form-group">
-              {% if field.name == "start_date" %}
-                <label for="{{ field.auto_id }}">Data de início:</label>
-              {% elif field.name == "end_date" %}
-                <label for="{{ field.auto_id }}">Data de término:</label>
-              {% else %}
-                <label for="{{ field.auto_id }}">{{ field.label }}</label>
-              {% endif %}
-              {% if field.name == "start_date" or field.name == "end_date" %}
-                <input type="date" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% else %}
-                <input type="{{ field.field.widget.input_type }}" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% endif %}
-            </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary">Filtrar</button>
-        </form>
-        <div class="table-responsive">
-          <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
-          <button id="download-btn" type="button" class="btn btn-primary">
-            Baixar Excel
-          </button>
-          <table class="table">
-            <thead class="text-primary">
-              <th>ID</th>
-              <th>Código</th>
-              <th>É válido</th>
-              <th>Excluir</th>
-            </thead>
-            <tbody id="voucher-table-body">
-              {% for voucher in filter.qs %}
-              <tr data-id="{{ voucher.id }}">
-                <td>{{ voucher.id }}</td>
-                <td style="cursor: pointer;" class="voucher-code">{{ voucher.code }}</td>
-                <td><input type="checkbox" class="toggle-validity" data-id="{{ voucher.id }}" {% if voucher.is_valid %}checked{% endif %}></td>
-                <td>
-                  <i class="fa fa-times delete-icon" data-id="{{ voucher.id }}"></i>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div id="voucher-table-container">
+          <div class="table-responsive">
+            <table class="table" id="voucher-table">
+              <thead class="text-primary">
+                <th>Código</th>
+                <th>Válido</th>
+                <th>Ações</th>
+              </thead>
+              <tbody>
+                {% for voucher in vouchers %}
+                  <tr>
+                    <td>{{ voucher.code }}</td>
+                    <td>{{ voucher.is_valid|yesno:"Sim,Não" }}</td>
+                    <td>
+                      <!-- Ações aqui -->
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <div id="pagination-container">
+            {% include "includes/pagination.html" with page_obj=vouchers %}
+          </div>
         </div>
       </div>
     </div>
@@ -241,4 +217,35 @@ function s2ab(s) {
 </script>
 {% endblock content %}
 
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    function loadVouchers(url) {
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(data) {
+                $('#voucher-table-container').html($(data).find('#voucher-table-container').html());
+                // Reattach event listeners after content update
+                attachPaginationListeners();
+            },
+            error: function(xhr, status, error) {
+                console.error("An error occurred: " + error);
+            }
+        });
+    }
+
+    function attachPaginationListeners() {
+        $('.pagination a').on('click', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            loadVouchers(url);
+        });
+    }
+
+    // Initial attachment of event listeners
+    attachPaginationListeners();
+});
+</script>
+{% endblock javascripts %}

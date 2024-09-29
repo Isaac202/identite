@@ -4,7 +4,7 @@ from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia,
 from django.contrib.auth import views as auth_views
 
 router = DefaultRouter()
-router.register(r'vouchers', VoucherViewSet)
+router.register(r'voucherss', VoucherViewSet)
 router.register(r'dadosclientes', DadosClienteViewSet)
 
 urlpatterns = [
