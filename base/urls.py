@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia, atualizar_empresa,check_voucher, create_client_and_assign_voucher, create_voucher, delete_voucher, edit_voucher, empresa_form_view, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, get_empresa_data, list_vouchers,update_status_view, update_status, voucher_statistics
+from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia, atualizar_empresa, atualizar_status_individual_view,check_voucher, consultar_status_view, create_client_and_assign_voucher, create_voucher, delete_voucher, edit_voucher, empresa_form_view, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, get_empresa_data, list_vouchers,update_status_view, update_status, voucher_statistics
 from django.contrib.auth import views as auth_views
 
 router = DefaultRouter()
@@ -25,6 +25,8 @@ urlpatterns = [
     path('edit_voucher/<int:id>/', edit_voucher, name='edit_voucher'),
     path('update_status/<int:pedido_id>/', update_status, name='update_status'),
     path('delete_voucher/<int:id>/', delete_voucher, name='delete_voucher'),
+    path('consultar_status/<int:cliente_id>/', consultar_status_view, name='consultar_status'),
+    path('atualizar_status_individual/<int:cliente_id>/', atualizar_status_individual_view, name='atualizar_status_individual'),
     path('atualizar/empresa/<str:voucher>/', atualizar_empresa, name='atualizar_empresa'),
     path('login/', auth_views.LoginView.as_view(template_name='home/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),

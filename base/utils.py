@@ -277,3 +277,21 @@ def fetch_empresa_data(cnpj):
                 # Adicione aqui outros campos que você deseja retornar
             }
     return None
+
+def verificar_agendamento(hash_venda):
+    endpoint = f'{url}/api/GarAPIs/VerificarAgendamento'
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "apiKey": API_KEY,
+        "HashVenda": hash_venda
+    }
+
+    response = requests.post(endpoint, json=payload, headers=headers)
+    if response.status_code == 200:
+        try:
+            response_data = response.json()
+            return response_data, None
+        except json.decoder.JSONDecodeError:
+            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    else:
+        return None, [f"Erro: A requisição retornou o status {response.status_code}"]
