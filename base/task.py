@@ -46,9 +46,9 @@ def salvar_arquivos_cliente(id_cliente, rg_frente_b64=None, rg_verso_b64=None, c
 
     
 @shared_task
-def update_status_celery():
-    clientes = DadosCliente.objects.filter(pedido__status='5')
-    print(clientes.count())
+def update_status_celery(cliente_ids):
+    clientes = DadosCliente.objects.filter(id__in=cliente_ids, pedido__status='5')
+    print(f"Atualizando {clientes.count()} clientes")
     clientes_to_update = []
     for cliente in clientes:
         status, error = consultar_status_pedido(cliente.pedido.pedido)
@@ -61,3 +61,5 @@ def update_status_celery():
 
     # Atualiza todos os pedidos modificados de uma vez
     Pedidos.objects.bulk_update(clientes_to_update, ['status'])
+    print(f"Atualizados {len(clientes_to_update)} clientes")
+    return f"Atualizados {len(clientes_to_update)} de {clientes.count()} clientes"

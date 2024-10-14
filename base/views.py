@@ -28,6 +28,9 @@ from .models import Voucher, Lote
 import requests
 from rest_framework import status
 from django.conf import settings
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.db import transaction
 
 
 
@@ -316,26 +319,60 @@ def create_voucher(request):
     return render(request, 'home/create_voucher.html', {'form': form})
 
 def update_status_view(request):
-    update_status_celery.delay()
+    filter_params = request.GET.dict()
+    queryset = DadosCliente.objects.all()
 
-    # Redireciona para a página anterior
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('painel')))
+    if 'start_date' in filter_params and filter_params['start_date']:
+        queryset = queryset.filter(created_at__gte=filter_params['start_date'])
+    if 'end_date' in filter_params and filter_params['end_date']:
+        queryset = queryset.filter(created_at__lte=filter_params['end_date'])
+    if 'status' in filter_params and filter_params['status']:
+        queryset = queryset.filter(pedido__status=filter_params['status'])
+    if 'nome_completo' in filter_params and filter_params['nome_completo']:
+        queryset = queryset.filter(nome_completo__icontains=filter_params['nome_completo'])
+    if 'cnpj' in filter_params and filter_params['cnpj']:
+        queryset = queryset.filter(cnpj__icontains=filter_params['cnpj'])
+    if 'voucher_code' in filter_params and filter_params['voucher_code']:
+        queryset = queryset.filter(voucher__code__icontains=filter_params['voucher_code'])
+
+    # Filtra apenas clientes com status '5' (assumindo que '5' é o status que precisa ser atualizado)
+    queryset = queryset.filter(pedido__status='5')
+
+    clientes = queryset[:100]  # Limita a 100 clientes
+    cliente_ids = list(clientes.values_list('id', flat=True))
+
+    update_status_celery.delay(cliente_ids)
+
+    return JsonResponse({'success': True, 'message': f'Atualizando {len(cliente_ids)} clientes.'})
+
+
 @login_required
 def voucher_statistics(request):
-
-    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher').order_by('-created_at'))
+    # Aplicar filtros
+    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher', 'pedido').order_by('-created_at'))
     clients_with_vouchers = dados_cliente_filter.qs
-    all_voucher = Voucher.objects.all()
+
+    # Calcular estatísticas com base nos filtros aplicados
     total_clients = clients_with_vouchers.distinct().count()
-    active_vouchers = all_voucher.filter(is_valid=True).count()
-    inactive_vouchers = all_voucher.filter(is_valid=False).count()
+    
+    # Obter vouchers únicos dos clientes filtrados
+    filtered_vouchers = Voucher.objects.filter(dadoscliente__in=clients_with_vouchers).distinct()
+    
+    active_vouchers = filtered_vouchers.filter(is_valid=True).count()
+    inactive_vouchers = filtered_vouchers.filter(is_valid=False).count()
+
+    # Adicionar paginação
+    paginator = Paginator(clients_with_vouchers, 10)  # 10 itens por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'filter': dados_cliente_filter,
         'total_clients': total_clients,
         'active_vouchers': active_vouchers,
         'inactive_vouchers': inactive_vouchers,
-        'clients_with_vouchers': clients_with_vouchers,
+        'clients_with_vouchers': page_obj,
+        'page_obj': page_obj,
     }
 
     return render(request, 'home/index.html', context)
@@ -495,3 +532,76 @@ def handler404(request, exception, *args, **argv):
 
 def handler500(request, *args, **argv):
     return render(request, '500.html', status=500)
+
+def consultar_status_view(request, cliente_id):
+    try:
+        with transaction.atomic():
+            cliente = DadosCliente.objects.select_for_update().get(id=cliente_id)
+            status_data, error = consultar_status_pedido(cliente.pedido.pedido)
+            if error:
+                return JsonResponse({'success': False, 'error': error})
+            
+            status_dict = dict(Pedidos.STATUS_CHOICES)
+            status_key = get_key_by_value(status_dict, status_data["StatusPedido"])
+            
+            # Atualiza o status do pedido
+            if cliente.pedido.status != status_key:
+                cliente.pedido.status = status_key
+                cliente.pedido.save()
+            
+            # Atualiza o protocolo se disponível
+            if status_data.get("Protocolo") and cliente.pedido.protocolo != status_data["Protocolo"]:
+                cliente.pedido.protocolo = status_data["Protocolo"]
+                cliente.pedido.save()
+            
+            # Atualiza o hashVenda se disponível
+            if status_data.get("HashVenda") and cliente.pedido.hashVenda != status_data["HashVenda"]:
+                cliente.pedido.hashVenda = status_data["HashVenda"]
+                cliente.pedido.save()
+
+            # Atualiza ou cria o agendamento
+            if status_data.get("DataHoraAgenda"):
+                data_hora = datetime.strptime(status_data["DataHoraAgenda"], "%d/%m/%Y %H:%M:%S")
+                agendamento, created = Agendamento.objects.update_or_create(
+                    pedido=cliente.pedido,
+                    defaults={
+                        'data': data_hora.strftime("%Y-%m-%d"),
+                        'hora': data_hora.strftime("%H:%M:%S")
+                    }
+                )
+
+        return JsonResponse({
+            'success': True,
+            'status': status_dict.get(status_key, "Desconhecido"),
+            'status_description': status_data.get("StatusPedido", "Descrição não disponível"),
+            'protocolo': status_data.get("Protocolo", "Não disponível"),
+            'hashVenda': status_data.get("HashVenda", "Não disponível"),
+            'data_status': status_data.get("DataStatusPedido", "Não disponível"),
+            'local_agendamento': status_data.get("LocalAgendamento", "Não disponível"),
+            'data_hora_agenda': status_data.get("DataHoraAgenda", "Não disponível")
+        })
+    except DadosCliente.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+
+@require_POST
+def atualizar_status_individual_view(request, cliente_id):
+    try:
+        cliente = DadosCliente.objects.get(id=cliente_id)
+        status, error = consultar_status_pedido(cliente.pedido.pedido)
+        if error:
+            return JsonResponse({'success': False, 'error': error})
+        print(status)
+        status_dict = dict(Pedidos.STATUS_CHOICES)
+        status_key = get_key_by_value(status_dict, status["StatusPedido"])
+        
+        if cliente.pedido.status != status_key:
+            cliente.pedido.status = status_key
+            cliente.pedido.save()
+        
+        return JsonResponse({
+            'success': True,
+            'status': status_dict.get(status_key, "Desconhecido"),
+            'status_description': status.get("StatusPedido", "Descrição não disponível")
+        })
+    except DadosCliente.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})

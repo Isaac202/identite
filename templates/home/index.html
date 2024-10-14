@@ -3,15 +3,229 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 <style>
   .voucher-code {
     cursor: pointer;
+  }
+  .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .pagination .page-item {
+    margin: 0 5px;
+  } 
+  .pagination .page-item.active .page-link {
+    background-color: #007bff;
+    color: white;
+  }   
+  
+  .table-container {
+    position: relative;
+  }
+
+  #loading {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .filter-form {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .filter-form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -5px;
+    margin-left: -5px;
+  }
+
+  .filter-form .form-group {
+    flex: 1 0 180px;
+    margin: 0 5px 10px;
+  }
+
+  .filter-form label {
+    font-weight: bold;
+    margin-bottom: 3px;
+    display: block;
+    font-size: 0.9em;
+  }
+
+  .filter-form input,
+  .filter-form select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    font-size: 0.9em;
+  }
+
+  .filter-form input:focus,
+  .filter-form select:focus {
+    padding: 8px;
+    box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+    border: 1px solid rgba(81, 203, 238, 1);
+  }
+
+  .filter-form button {
+    margin-top: 5px;
+    padding: 6px 12px;
+    font-size: 0.9em;
+  }
+
+  .date-input-wrapper {
+    position: relative;
+  }
+
+  .date-input-wrapper i {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+    font-size: 0.9em;
+  }
+
+  .date-input-wrapper input {
+    padding-right: 25px;
+  }
+
+  .date-range-picker {
+    display: flex;
+    gap: 10px;
+  }
+
+  .date-range-picker input {
+    flex: 1;
+  }
+
+  /* Responsive table styles */
+  @media screen and (max-width: 600px) {
+    table {
+      border: 0;
+    }
+
+    table caption {
+      font-size: 1.3em;
+    }
+    
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+    
+    table tr {
+      border-bottom: 3px solid #ddd;
+      display: block;
+      margin-bottom: .625em;
+    }
+    
+    table td {
+      border-bottom: 1px solid #ddd;
+      display: block;
+      font-size: .8em;
+      text-align: right;
+    }
+    
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    table td:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  .spinner-border {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    vertical-align: text-bottom;
+    border: 0.2em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    -webkit-animation: spinner-border .75s linear infinite;
+    animation: spinner-border .75s linear infinite;
+  }
+
+  @keyframes spinner-border {
+    to { transform: rotate(360deg); }
+  }
+
+  .table tbody tr {
+    cursor: pointer;
+  }
+
+  .modal-body dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+  }
+
+  .modal-body dt {
+    font-weight: bold;
+  }
+
+  .modal-body dd {
+    margin-left: 0;
+  }
+
+  #updateStatusIndividual {
+    margin-right: 10px;
+  }
+
+  .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.2em;
   }
 </style>
 {% endblock stylesheets %}
 
 {% block content %}
-<div class="row">
+<div class="row" id="stats-cards">
   <div class="col-lg-3 col-md-6 col-sm-6">
     <div class="card card-stats">
       <div class="card-header card-header-warning card-header-icon">
@@ -19,7 +233,7 @@
           <i class="fa fa-user"></i>
         </div>
         <p class="card-category">Clientes com Vouchers</p>
-        <h3 class="card-title">{{ total_clients }}</h3>
+        <h3 class="card-title" id="total-clients">{{ total_clients }}</h3>
       </div>
       <div class="card-footer">
         <div class="stats">
@@ -35,7 +249,7 @@
           <i class="fa fa-check"></i>
         </div>
         <p class="card-category">Vouchers Ativos</p>
-        <h3 class="card-title">{{ active_vouchers }}</h3>
+        <h3 class="card-title" id="active-vouchers">{{ active_vouchers }}</h3>
       </div>
       <div class="card-footer">
         <div class="stats">
@@ -51,7 +265,7 @@
           <i class="fa fa-times"></i>
         </div>
         <p class="card-category">Vouchers Inativos</p>
-        <h3 class="card-title">{{ inactive_vouchers }}</h3>
+        <h3 class="card-title" id="inactive-vouchers">{{ inactive_vouchers }}</h3>
       </div>
       <div class="card-footer">
         <div class="stats">
@@ -70,28 +284,58 @@
         <p class="card-category">Lista de clientes que utilizaram vouchers</p>
       </div>
       <div class="card-body">
-        <a class="btn btn-primary"href="{% url 'update_status_view' %}">Atualizar status</a>
-        <form style="max-width: 180px;" id="filter-form" class="mb-3" action="{% url 'painel' %}" method="get">
-          {% for field in filter.form %}
+        <a id="update-status-btn" class="btn btn-primary mb-3" href="#" 
+           data-toggle="tooltip" data-placement="top" 
+           title="Atualiza o status de todos os clientes listados na tabela (máximo de 100)">
+          <span class="spinner-border" role="status" aria-hidden="true"></span>
+          <span class="btn-text">Atualizar status</span>
+        </a>
+        
+        <!-- Filter form -->
+        <form id="filter-form" class="filter-form">
+          <div class="form-row">
             <div class="form-group">
-              {% if field.name == "start_date" %}
-                <label for="{{ field.auto_id }}">Data de início:</label>
-              {% elif field.name == "end_date" %}
-                <label for="{{ field.auto_id }}">Data de término:</label>
-              {% else %}
-                <label for="{{ field.auto_id }}">{{ field.label }}</label>
-              {% endif %}
-              {% if field.name == "start_date" or field.name == "end_date" %}
-                <input type="date" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% else %}
-                <input type="{{ field.field.widget.input_type }}" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% endif %}
+              <div class="date-input-wrapper">
+                <input type="text" id="start_date" name="start_date" class="form-control" placeholder="Data inicial">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
             </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+            <div class="form-group">
+              <div class="date-input-wrapper">
+                <input type="text" id="end_date" name="end_date" class="form-control" placeholder="Data final">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="id_status">Status</label>
+              {{ filter.form.status }}
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_nome_completo">Nome do Cliente</label>
+              {{ filter.form.nome_completo }}
+            </div>
+            <div class="form-group">
+              <label for="id_cnpj">CNPJ</label>
+              {{ filter.form.cnpj }}
+            </div>
+            <div class="form-group">
+              <label for="id_voucher_code">Código do Voucher</label>
+              {{ filter.form.voucher_code }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Filtrar</button>
         </form>
-        <div class="table-responsive">
-          <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
+
+        <div class="table-container">
+          <!-- Top Pagination -->
+          <nav aria-label="Page navigation" class="mb-3">
+            <ul id="pagination-top" class="pagination justify-content-center">
+              {% include "pagination_links.html" with page_obj=page_obj %}
+            </ul>
+          </nav>
+
           <table class="table">
             <thead class="text-primary">
               <th>ID</th>
@@ -105,28 +349,158 @@
               <th>Data</th>
             </thead>
             <tbody id="voucher-table-body">
-              {% for cliente in clients_with_vouchers %}
-              <tr data-id="{{ cliente.voucher.id }}">
-                <td>{{ cliente.id|default:"Não disponível" }}</td>
-                <td>{{ cliente.nome_completo|default:"Não disponível" }}</td>
-                <td>{{ cliente.pedido.protocolo|default:"Ainda não gerado pelo cliente" }}</td>
-                <td>{{ cliente.pedido.pedido|default:"Não disponível" }}</td>
-                <td>{{ cliente.cnpj|default:"Não disponível" }}</td>
-                <td>{{ cliente.telefone|default:"Não disponível" }}</td>
-                <td style="cursor: pointer;" class="voucher-code">{{ cliente.voucher.code|default:"Não disponível" }}</td>
-                <td>{{ cliente.pedido.get_status_display|default:"Não disponível" }}</td>
-                <td>{{ cliente.created_at|default:"Não disponível" }}</td>
+              {% for cliente in page_obj %}
+              <tr data-id="{{ cliente.id }}">
+                <td data-label="ID">{{ cliente.id|default:"Não disponível" }}</td>
+                <td data-label="Nome Completo">{{ cliente.nome_completo|default:"Não disponível" }}</td>
+                <td data-label="Protocolo">{{ cliente.pedido.protocolo|default:"Ainda não gerado pelo cliente" }}</td>
+                <td data-label="Pedido">{{ cliente.pedido.pedido|default:"Não disponível" }}</td>
+                <td data-label="CNPJ">{{ cliente.cnpj|default:"Não disponível" }}</td>
+                <td data-label="Telefone">{{ cliente.telefone|default:"Não disponível" }}</td>
+                <td data-label="Código do Voucher" class="voucher-code">{{ cliente.voucher.code|default:"Não disponível" }}</td>
+                <td data-label="Status">{{ cliente.pedido.get_status_display }}</td>
+                <td data-label="Data">{{ cliente.created_at|date:"d/m/Y H:i:s"|default:"Não disponível" }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
+
+          <div id="loading">
+            <div class="spinner"></div>
+            <p>Carregando...</p>
+          </div>
         </div>
+
+        <!-- Bottom Pagination -->
+        <nav aria-label="Page navigation" class="mt-3">
+          <ul id="pagination-bottom" class="pagination justify-content-center">
+            {% include "pagination_links.html" with page_obj=page_obj %}
+          </ul>
+        </nav>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Modal -->
+<div class="modal fade" id="clienteModal" tabindex="-1" role="dialog" aria-labelledby="clienteModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="clienteModalLabel">Detalhes do Cliente</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <dl>
+          <dt>ID:</dt>
+          <dd id="modal-id"></dd>
+          <dt>Nome Completo:</dt>
+          <dd id="modal-nome"></dd>
+          <dt>Protocolo:</dt>
+          <dd id="modal-protocolo"></dd>
+          <dt>Pedido:</dt>
+          <dd id="modal-pedido"></dd>
+          <dt>CNPJ:</dt>
+          <dd id="modal-cnpj"></dd>
+          <dt>Telefone:</dt>
+          <dd id="modal-telefone"></dd>
+          <dt>Código do Voucher:</dt>
+          <dd id="modal-voucher"></dd>
+          <dt>Descrição do Status:</dt>
+          <dd id="modal-status-description"></dd>
+          <dt>Data e Hora da Agendada:</dt>
+          <dd id="modal-data-hora-agenda"></dd>
+        </dl>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="updateStatusIndividual" class="btn btn-primary">
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          Atualizar Status
+        </button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tableBody = document.getElementById('voucher-table-body');
+  const paginationTop = document.getElementById('pagination-top');
+  const paginationBottom = document.getElementById('pagination-bottom');
+  const loading = document.getElementById('loading');
+  const filterForm = document.getElementById('filter-form');
+  const statsCards = document.getElementById('stats-cards');
+  const updateStatusBtn = document.getElementById('update-status-btn');
+  const spinner = updateStatusBtn.querySelector('.spinner-border');
+  const btnText = updateStatusBtn.querySelector('.btn-text');
+
+  // Initialize date pickers
+  flatpickr("#start_date, #end_date", {
+    dateFormat: "Y-m-d",
+    allowInput: true,
+  });
+
+  // Inicializa o tooltip
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
+  updateStatusBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    updateStatus();
+  });
+
+  function updateStatus() {
+    // Desabilita o botão e mostra o spinner
+    updateStatusBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Atualizando...';
+
+    // Desativa o tooltip durante a atualização
+    $(updateStatusBtn).tooltip('disable');
+
+    const formData = new FormData(filterForm);
+    const searchParams = new URLSearchParams(formData);
+    const url = '/update_status/?' + searchParams.toString();
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Status atualizado com sucesso!');
+        loadPage(window.location.href);
+      } else {
+        alert('Erro ao atualizar status: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Erro ao atualizar status');
+    })
+    .finally(() => {
+      // Reativa o botão e esconde o spinner
+      updateStatusBtn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Atualizar status';
+
+      // Reativa o tooltip
+      $(updateStatusBtn).tooltip('enable');
+    });
+  }
+
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -142,13 +516,39 @@
     return cookieValue;
   }
 
-  const csrftoken = getCookie('csrftoken');
+  function loadPage(url) {
+    loading.style.display = 'flex';
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        const newTableBody = doc.getElementById('voucher-table-body');
+        const newPaginationTop = doc.getElementById('pagination-top');
+        const newPaginationBottom = doc.getElementById('pagination-bottom');
+        const newStatsCards = doc.getElementById('stats-cards');
+        
+        tableBody.innerHTML = newTableBody.innerHTML;
+        paginationTop.innerHTML = newPaginationTop.innerHTML;
+        paginationBottom.innerHTML = newPaginationBottom.innerHTML;
+        statsCards.innerHTML = newStatsCards.innerHTML;
+        
+        attachEventListeners();
+        loading.style.display = 'none';
+        
+        // Update URL without reloading the page
+        history.pushState(null, '', url);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        loading.style.display = 'none';
+      });
+  }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('search-input');
-
-    function attachEventListeners(row) {
-      row.querySelector('.voucher-code').addEventListener('click', function() {
+  function attachEventListeners() {
+    document.querySelectorAll('.voucher-code').forEach(el => {
+      el.addEventListener('click', function() {
         const code = this.innerText;
         navigator.clipboard.writeText(code).then(() => {
           alert('Código copiado: ' + code);
@@ -156,19 +556,114 @@
           console.error('Erro ao copiar o código: ', err);
         });
       });
-    }
+    });
 
-    searchInput.addEventListener('input', function() {
-      const query = this.value.toLowerCase();
-      document.querySelectorAll('#voucher-table-body tr').forEach(row => {
-        const code = row.cells[4].innerText.toLowerCase(); // index 4 for Código do Voucher
-        row.style.display = code.includes(query) ? '' : 'none';
+    [paginationTop, paginationBottom].forEach(pagination => {
+      pagination.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          loadPage(this.href);
+        });
       });
     });
 
-    document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
-  });
-</script>
-{% endblock content %}
+    // Adiciona evento de clique às linhas da tabela
+    document.querySelectorAll('#voucher-table-body tr').forEach(row => {
+      row.addEventListener('click', function() {
+        const clienteId = this.getAttribute('data-id');
+        showClienteDetails(clienteId);
+      });
+    });
+  }
 
-{% block javascripts %}{% endblock javascripts %}
+  let currentClienteId;
+
+  function showClienteDetails(clienteId) {
+    currentClienteId = clienteId;
+    const row = document.querySelector(`tr[data-id="${clienteId}"]`);
+    
+    document.getElementById('modal-id').textContent = row.querySelector('[data-label="ID"]').textContent;
+    document.getElementById('modal-nome').textContent = row.querySelector('[data-label="Nome Completo"]').textContent;
+    document.getElementById('modal-protocolo').textContent = row.querySelector('[data-label="Protocolo"]').textContent;
+    document.getElementById('modal-pedido').textContent = row.querySelector('[data-label="Pedido"]').textContent;
+    document.getElementById('modal-cnpj').textContent = row.querySelector('[data-label="CNPJ"]').textContent;
+    document.getElementById('modal-telefone').textContent = row.querySelector('[data-label="Telefone"]').textContent;
+    document.getElementById('modal-voucher').textContent = row.querySelector('[data-label="Código do Voucher"]').textContent;
+    document.getElementById('modal-status-description').textContent = "Carregando...";
+    document.getElementById('modal-protocolo').textContent = "Carregando...";
+    document.getElementById('modal-data-hora-agenda').textContent = "Carregando...";
+
+    $('#clienteModal').modal('show');
+
+    // Consulta o status atualizado
+    fetchUpdatedStatus(clienteId);
+  }
+
+  function fetchUpdatedStatus(clienteId) {
+    fetch(`/consultar_status/${clienteId}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('modal-status-description').textContent = data.status_description;
+          document.getElementById('modal-protocolo').textContent = data.protocolo;
+          document.getElementById('modal-data-hora-agenda').textContent = data.data_hora_agenda;
+          
+          // Atualiza a linha da tabela com o novo status e protocolo
+          const row = document.querySelector(`tr[data-id="${clienteId}"]`);
+          row.querySelector('[data-label="Status"]').textContent = data.status;
+          row.querySelector('[data-label="Protocolo"]').textContent = data.protocolo;
+        } else {
+          document.getElementById('modal-status-description').textContent = "Erro ao carregar status atualizado.";
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('modal-status-description').textContent = "Erro ao carregar status atualizado.";
+      });
+  }
+
+  document.getElementById('updateStatusIndividual').addEventListener('click', function() {
+    const button = this;
+    const spinner = button.querySelector('.spinner-border');
+    
+    button.disabled = true;
+    spinner.classList.remove('d-none');
+
+    fetch(`/atualizar_status_individual/${currentClienteId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Status atualizado com sucesso!');
+        fetchUpdatedStatus(currentClienteId);
+      } else {
+        alert('Erro ao atualizar status: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Erro ao atualizar status');
+    })
+    .finally(() => {
+      button.disabled = false;
+      spinner.classList.add('d-none');
+    });
+  });
+
+  filterForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const searchParams = new URLSearchParams(formData);
+    const url = `${window.location.pathname}?${searchParams.toString()}`;
+    loadPage(url);
+  });
+
+  // Initial event listeners attachment
+  attachEventListeners();
+});
+</script>
+{% endblock javascripts %}
