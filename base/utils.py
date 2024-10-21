@@ -163,7 +163,9 @@ def create_client_and_order(cnpj, voucher):
     # Obter dados de endereço pelo CEP
     cep = empresa_data.get('cep')
     cep = cep.replace(".", "").replace("-", "").replace(" ", "")
+    print(cep)
     endereco_data = get_address_data(cep)
+    print(endereco_data)    
     if not endereco_data:
         return None, {'error': 'Dados de endereço não encontrados'}, 404
 
