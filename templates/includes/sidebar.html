@@ -15,17 +15,23 @@
               <p>Dashboard</p>
             </a>
           </li>
-          <li class="nav-item {% url 'vouchers' %}">
+          <li class="nav-item {% if 'vouchers' in segment %} active {% endif %}">
             <a class="nav-link" href="{% url 'vouchers' %}">
               <i class="fa fa-hospital-o"></i>
               <p>Vouchers</p>
+            </a>
+          </li>
+          <li class="nav-item {% if 'panel_client_form' in segment %} active {% endif %}">
+            <a class="nav-link" href="{% url 'panel_client_form' %}">
+              <i class="material-icons">person_add</i>
+              <p>Client Form</p>
             </a>
           </li>
           <li style="cursor: pointer;" class="nav-item ">
             <form style="cursor: pointer;" id="logout-form" method="post" action="{% url 'logout' %}">
               {% csrf_token %}
               <button type="submit" class="dropdown-item">Log out</button>
-          </form>
+            </form>
           </li>            
 
         {% endif %}

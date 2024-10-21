@@ -1,0 +1,23 @@
+<div id="documentsSection" class="hidden">
+    <h3>Documentos</h3>
+    <p>Por favor, faça o upload da Carteira de Habilitação ou ambos os lados do RG.</p>
+    <div class="form-group">
+        <label for="driverLicense">Carteira de Habilitação</label>
+        <input type="file" id="driverLicense" class="form-control" name="driverLicense" accept="image/jpeg, image/png, image/jpg, application/pdf">
+        <img id="preview-driverLicense" class="preview-image" alt="Visualização da Carteira de Habilitação">
+        <iframe id="preview-driverLicense-pdf" class="preview-pdf" frameborder="0"></iframe>
+    </div>
+    <div class="form-group">
+        <label for="idFront">RG (Frente)</label>
+        <input type="file" id="idFront" class="form-control" name="idFront" accept="image/jpeg, image/png, image/jpg, application/pdf">
+        <img id="preview-idFront" class="preview-image" alt="Visualização da Frente do RG">
+        <iframe id="preview-idFront-pdf" class="preview-pdf" frameborder="0"></iframe>
+    </div>
+    <div class="form-group">
+        <label for="idBack">RG (Verso)</label>
+        <input type="file" id="idBack" class="form-control" name="idBack" accept="image/jpeg, image/png, image/jpg, application/pdf">
+        <img id="preview-idBack" class="preview-image" alt="Visualização do Verso do RG">
+        <iframe id="preview-idBack-pdf" class="preview-pdf" frameborder="0"></iframe>
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="prevSection('personalInfoSection')">Anterior</button>
+</div>

@@ -31,6 +31,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db import transaction
+from django.contrib import messages
 
 
 
@@ -38,19 +39,19 @@ API_KEY = 'e9f1c3b7d2f44a3294d3b1e3429f6a75'
 
 
 def get_empresa_data(request):
-    cnpj = request.GET.get('cnpj', None)
-    CPFCNPJ_API_KEY = settings.CPFCNPJ
-    if cnpj and len(cnpj) == 14:
-        response = requests.get(f'https://api.cpfcnpj.com.br/{CPFCNPJ_API_KEY}/5/{cnpj}')
-        if response.status_code == 200:
-            data = response.json()
+    cnpj = request.GET.get('cnpj')
+    print(f"CNPJ recebido: {cnpj}")
+    if cnpj:
+        empresa_data = fetch_empresa_data(cnpj)
+        print(f"Dados da empresa: {empresa_data}")
+        if empresa_data:
             return JsonResponse({
-                'razao': data.get('razao'),
-                'fantasia': data.get('fantasia'),
-                'cep': data.get('matrizEndereco', {}).get('cep'),
-                # Adicione aqui outros campos que você deseja retornar
+                'success': True,
+                'razao_social': empresa_data.get('razao'),
+                'nome_fantasia': empresa_data.get('fantasia'),
+                'cep': empresa_data.get('cep')
             })
-    return JsonResponse({'error': 'CNPJ inválido'}, status=400)
+    return JsonResponse({'success': False})
 
 
 @csrf_exempt
@@ -605,3 +606,87 @@ def atualizar_status_individual_view(request, cliente_id):
         })
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+
+@login_required
+def panel_client_form(request):
+    if request.method == 'POST':
+        # Extrair dados do formulário
+        print("POST")
+        nome_completo = request.POST.get('nomeCompleto')
+        email = request.POST.get('email')
+        telefone = request.POST.get('telefone')
+        cpf = request.POST.get('cpf')
+        data_nascimento = request.POST.get('data_nascimento')
+        
+        # Dados da empresa
+        cnpj = request.POST.get('cnpj')
+        razao_social = request.POST.get('razaoSocial')
+        nome_fantasia = request.POST.get('nomeFantasia')
+        
+        # Endereço
+        cep = request.POST.get('cep')
+        logradouro = request.POST.get('logradouro')
+        numero = request.POST.get('numero')
+        complemento = request.POST.get('complemento')
+        bairro = request.POST.get('bairro')
+        cidade = request.POST.get('cidade')
+        uf = request.POST.get('uf')
+        ibge = request.POST.get('ibge')
+
+        # Voucher
+        voucher_code = request.POST.get('voucher')
+
+        try:
+            # Verificar se o voucher existe e é válido
+            voucher = Voucher.objects.get(code=voucher_code, is_valid=True)
+
+            # Criar um novo pedido
+            pedido = Pedidos.objects.create(
+                pedido=generate_random_code(),  # Função para gerar um código aleatório
+                status='13'  # Status inicial do pedido
+            )
+
+            # Criar ou atualizar o cliente
+            cliente, created = DadosCliente.objects.update_or_create(
+                cnpj=cnpj,
+                defaults={
+                    'nome_completo': nome_completo,
+                    'email': email,
+                    'telefone': telefone,
+                    'cpf': cpf,
+                    'data_nacimento': data_nascimento,
+                    'razao_social': razao_social,
+                    'nome_fantasia': nome_fantasia,
+                    'cep': cep,
+                    'logradouro': logradouro,
+                    'numero': numero,
+                    'complemento': complemento,
+                    'bairro': bairro,
+                    'cidade': cidade,
+                    'uf': uf,
+                    'cod_ibge': ibge,
+                    'pedido': pedido,
+                    'voucher': voucher
+                }
+            )
+
+            # Marcar o voucher como usado
+            voucher.is_valid = False
+            voucher.save()
+
+            messages.success(request, 'Dados do cliente salvos com sucesso.')
+            return redirect('painel')  # Redirecionar para a página do painel
+
+        except Voucher.DoesNotExist:
+            messages.error(request, 'Voucher inválido ou já utilizado.')
+        except Exception as e:
+            messages.error(request, f'Erro ao salvar os dados: {str(e)}')
+
+    # Se for GET ou se houver erro no POST, renderizar o formulário
+    return render(request, 'panel_client_form.html')
+
+
+
+
+
+

@@ -1,0 +1,31 @@
+<nav>
+    <!-- ... other navigation items ... -->
+    <a href="{% url 'painel' %}">Dashboard</a>
+    <a href="{% url 'vouchers' %}">Vouchers</a>
+    <a href="{% url 'panel_client_form' %}">Client Form</a>
+</nav>
+
+{% block stylesheets %}
+{{ block.super }}
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css">
+<link rel="stylesheet" href="{% static 'assets/css/material-dashboard.css' %}">
+{% endblock stylesheets %}
+
+{% block javascripts %}
+{{ block.super }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js"></script>
+<script src="{% static 'assets/js/material-dashboard.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        if (typeof $.fn.bootstrapMaterialDesign === 'function') {
+            $('body').bootstrapMaterialDesign();
+        } else {
+            console.warn('bootstrapMaterialDesign is not available');
+        }
+    });
+</script>
+{% endblock javascripts %}

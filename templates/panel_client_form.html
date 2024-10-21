@@ -1,0 +1,266 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %} Formulário de Cliente {% endblock %}
+
+{% block stylesheets %}
+{{ block.super }}
+<style>
+    /* Adicione estilos personalizados aqui, se necessário */
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-primary">
+            <h4 class="card-title">Formulário de Dados do Cliente</h4>
+            <p class="card-category">Insira as informações do cliente e da empresa</p>
+          </div>
+          <div class="card-body">
+            <form id="clientDataForm" method="post" action="{% url 'panel_client_form' %}">
+              {% csrf_token %}
+              
+              <h4>Dados Pessoais</h4>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="nomeCompleto">Nome Completo</label>
+                    <input type="text" class="form-control" name="nomeCompleto" id="nomeCompleto" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" class="form-control" name="email" id="email" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="telefone">Telefone (WhatsApp)</label>
+                    <input type="tel" class="form-control" name="telefone" id="telefone" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="cpf">CPF</label>
+                    <input type="text" class="form-control" name="cpf" id="cpf" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="data_nascimento">Data de Nascimento</label>
+                    <input type="text" class="form-control" name="data_nascimento" id="data_nascimento" required>
+                  </div>
+                </div>
+              </div>
+
+              <h4>Dados da Empresa</h4>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="cnpj">CNPJ</label>
+                    <input type="text" class="form-control" name="cnpj" id="cnpj" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="razaoSocial">Razão Social</label>
+                    <input type="text" class="form-control" name="razaoSocial" id="razaoSocial" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="nomeFantasia">Nome Fantasia</label>
+                    <input type="text" class="form-control" name="nomeFantasia" id="nomeFantasia" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="cep">CEP</label>
+                    <input type="text" class="form-control" name="cep" id="cep" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="logradouro">Logradouro</label>
+                    <input type="text" class="form-control" name="logradouro" id="logradouro" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="numero">Número</label>
+                    <input type="text" class="form-control" name="numero" id="numero" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="complemento">Complemento</label>
+                    <input type="text" class="form-control" name="complemento" id="complemento">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="bairro">Bairro</label>
+                    <input type="text" class="form-control" name="bairro" id="bairro" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="cidade">Cidade</label>
+                    <input type="text" class="form-control" name="cidade" id="cidade" required>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="uf">UF</label>
+                    <input type="text" class="form-control" name="uf" id="uf" required>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="ibge">Código IBGE</label>
+                    <input type="text" class="form-control" name="ibge" id="ibge" readonly>
+                  </div>
+                </div>
+              </div>
+
+              <h4>Voucher</h4>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="voucher">Código do Voucher</label>
+                    <input type="text" class="form-control" name="voucher" id="voucher" required>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary pull-right">Enviar</button>
+              <div class="clearfix"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+{{ block.super }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+$(document).ready(function() {
+    console.log('JavaScript loaded');
+    initializeForm();
+});
+
+function initializeForm() {
+    setupMasks();
+    setupFormSubmission();
+    setupCepLookup();
+    setupCnpjLookup();
+}
+
+function setupMasks() {
+    $('#telefone').mask('(00) 0 0000-0000');
+    $('#cpf').mask('000.000.000-00', {reverse: true});
+    $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
+    $('#data_nascimento').mask('00/00/0000');
+    $('#cep').mask('00000-000');
+}
+
+function setupFormSubmission() {
+    $('#clientDataForm').on('submit', function(event) {
+        event.preventDefault();
+        if (validateForm()) {
+            this.submit();
+        }
+    });
+}
+
+function setupCepLookup() {
+    $('#cep').blur(function(){
+        var cep = $(this).val().replace(/\D/g, '');
+        if (cep.length == 8) {
+            $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data) {
+                if (!("erro" in data)) {
+                    $('#logradouro').val(data.logradouro);
+                    $('#bairro').val(data.bairro);
+                    $('#cidade').val(data.localidade);
+                    $('#uf').val(data.uf);
+                    $('#ibge').val(data.ibge);
+                    $('#numero').focus();
+                } else {
+                    alert("CEP não encontrado.");
+                }
+            });
+        }
+    });
+}
+
+function setupCnpjLookup() {
+    $('#cnpj').blur(function(){
+        var cnpj = $(this).val().replace(/\D/g, '');
+        console.log('CNPJ digitado:', cnpj);
+        if (cnpj.length == 14) {
+            $.ajax({
+                url: '{% url "get_empresa_data" %}',
+                type: 'GET',
+                data: {cnpj: cnpj},
+                success: function(data) {
+                    console.log('Dados recebidos:', data);
+                    if (data.success) {
+                        $('#razaoSocial').val(data.razao_social);
+                        $('#nomeFantasia').val(data.nome_fantasia);
+                        $('#cep').val(data.cep).trigger('blur');
+                    } else {
+                        alert("Não foi possível encontrar os dados da empresa.");
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Erro na requisição:', textStatus, errorThrown);
+                    alert("Erro ao buscar dados da empresa. Por favor, preencha manualmente.");
+                }
+            });
+        }
+    });
+}
+
+function validateForm() {
+    var isValid = true;
+    $('[required]').each(function() {
+        if ($(this).val() === '') {
+            alert(`Por favor, preencha o campo ${$(this).attr('name')}.`);
+            isValid = false;
+            return false;  // breaks the each() loop
+        }
+    });
+    return isValid;
+}
+</script>
+{% endblock javascripts %}
