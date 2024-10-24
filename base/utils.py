@@ -260,9 +260,10 @@ def verifica_se_pode_videoconferecias(cliente):
     }
     response = requests.post(endpoint, data=json.dumps(payload), headers=headers)
     data = response.json()
-    if not data.get('IsOk', True) and not cliente.carteira_habilitacao:
-        return False
-    return True
+    print("data", data)
+    # Retorna True se data['IsOk'] for True ou se cliente.possui_cnh for True
+    # Retorna False apenas se ambos forem False
+    return data.get('IsOk', False) or cliente.possui_cnh
 
 def fetch_empresa_data(cnpj):
     CPFCNPJ_API_KEY = settings.CPFCNPJ
