@@ -458,13 +458,32 @@ def create_client_and_assign_voucher(request):
     
     # Buscar voucher disponível do tipo correto
     voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+    
+    # Se não houver voucher disponível, gerar novos
     if not voucher:
-        return JsonResponse({
-            'error': f'Nenhum voucher do tipo {tipo_voucher} disponível',
-            'tipo_solicitado': tipo_voucher
-        }, status=404)
+        # Criar um novo lote
+        lote = Lote.objects.create()
+        
+        # Gerar 1000 novos vouchers do tipo necessário
+        for _ in range(1000):
+            code = generate_random_code()
+            Voucher.objects.create(
+                code=code,
+                lote=lote,
+                tipo=tipo_voucher
+            )
+        
+        # Tentar obter um voucher novamente
+        voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+        
+        if not voucher:
+            return JsonResponse({
+                'error': f'Erro ao gerar novos vouchers do tipo {tipo_voucher}',
+                'tipo_solicitado': tipo_voucher
+            }, status=500)
     
     # Inativar o voucher
+    voucher.save()
     
     return JsonResponse({
         'id': voucher.id,
@@ -654,6 +673,7 @@ def voucher_statistics(request):
     }
 
     return render(request, 'home/index.html', context)
+
 
 
 
