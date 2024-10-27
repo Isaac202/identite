@@ -31,6 +31,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db import transaction
+from django.db.utils import IntegrityError
 
 
 
@@ -121,74 +122,105 @@ def empresa_form_view(request):
 def check_voucher(request):
     if request.method == 'POST':
         code = request.POST.get('voucher_code')
-        cnpj = request.POST["cnpj"]
-  
+        
         try:
-            cliente = DadosCliente.objects.get(voucher__code=code)
-            if cliente.pedido.protocolo:
-                return render(request, 'invalid.html')
-            else:
-                return redirect('form', slug=code)
-        except DadosCliente.DoesNotExist:
-            print("Linha 31")
+            voucher = Voucher.objects.get(code=code)
             
-            cliente_get =create_client_and_order(cnpj, code)
-            if not cliente_get:
-                return redirect('atualizar_empresa', voucher=code)
-            return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
-        except DadosCliente.MultipleObjectsReturned:
-            return render(request, 'invalid.html')
+            if not voucher.is_valid:
+                return render(request, 'invalid.html', {'message': 'Este voucher já foi utilizado.'})
+            
+            # Redirecionar para o formulário genérico
+            return redirect('form', slug=code)
+        
+        except Voucher.DoesNotExist:
+            return render(request, 'invalid.html', {'message': 'Voucher inválido.'})
+    
     return render(request, 'check_voucher.html')
 
-def form(request, slug=None):
+def form(request, slug):
     if slug is None:
         raise Http404("Página não encontrada.")
-    else:
-        try:
-            voucher = Voucher.objects.get(code=slug)
-            cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-            if cliente:
-                cliente_existente = True
-                nome_completo = cliente.nome_fantasia if cliente.nome_fantasia != "N/A" else cliente.razao_social.split(" ")[0] 
-            else:
-                nome_completo = None
-                cliente_existente = False
-        except Voucher.DoesNotExist:
-            return render(request, 'invalid.html', {'code': slug})
-
-    if request.method == 'POST':
-        if "cnpj" in request.POST and request.POST["cnpj"].strip():
-            cnpj = request.POST["cnpj"]
-            cliente_get =create_client_and_order(cnpj, slug)
-            if not cliente_get:
-                return redirect('atualizar_empresa', voucher=slug)
-            return redirect(request.path)
-        
-        cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-        
-        if request.POST["nomeCompleto"].strip():
-            cliente.nome_completo = request.POST["nomeCompleto"]
-        if request.POST["email"].strip():
-            cliente.email = request.POST["email"]
-        if request.POST["telefone"].strip():
-            telefone = request.POST["telefone"].replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
-            cliente.telefone = telefone
-        
-        # Adicione esta parte para salvar a informação sobre CNH
-        possui_cnh = request.POST.get("possui_cnh")
-        if possui_cnh:
-            cliente.possui_cnh = possui_cnh == "sim"
     
+    voucher = get_object_or_404(Voucher, code=slug)
+    cliente = DadosCliente.objects.filter(voucher=voucher).first()  # Pode ser None se não existir
+    
+    if request.method == 'POST':
+        # Verificar se estamos recebendo apenas a identificação (CNPJ/CPF)
+        identificacao = request.POST.get("identificacao")
+        if identificacao and not cliente:
+            cliente, error, _ = create_client_and_order(identificacao, slug)
+            if error:
+                return render(request, 'form.html', {'erro': error, 'slug': slug, 'voucher': voucher})
+            return redirect('form', slug=slug)
+
+        # Se o cliente não existe, crie um novo
+        if not cliente:
+            cliente = DadosCliente(voucher=voucher)
+        
+        # Se o cliente não tem um pedido associado, crie um novo
+        if not hasattr(cliente, 'pedido') or cliente.pedido is None:
+            novo_pedido = Pedidos.objects.create(status='13')  # Atribuído a Voucher
+            cliente.pedido = novo_pedido
+        
+        # Atualizar dados do cliente
+        if voucher.tipo == 'ECNPJ':
+            cliente.nome_fantasia = request.POST.get("nomeFantasia")
+            cliente.razao_social = request.POST.get("razaoSocial")
+            cliente.cnpj = request.POST.get("cnpj")
+        else:  # ECPF
+            cliente.nome_completo = request.POST.get("nomeCompleto")
+            cliente.cpf = request.POST.get("cpf")
+        
+        # Dados comuns para ambos os tipos
+        cliente.email = request.POST.get("email")
+        telefone = request.POST.get("telefone")
+        if telefone:
+            cliente.telefone = telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
+        cliente.possui_cnh = request.POST.get("possui_cnh") == "sim"
+        
+        # Salvar data de nascimento
+        data_nascimento = request.POST.get("data_nascimento")
+        if data_nascimento:
+            try:
+                # Converter a data do formato DD/MM/AAAA para YYYY-MM-DD
+                data_obj = datetime.strptime(data_nascimento, '%d/%m/%Y')
+                cliente.data_nacimento = data_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                return render(request, 'form.html', {
+                    'erro': 'Data de nascimento inválida',
+                    'slug': slug,
+                    'cliente': cliente,
+                    'voucher': voucher
+                })
+        
+        # Dados de endereço (podem ser necessários para ambos os tipos)
+        cliente.cep = request.POST.get("cep") or cliente.cep
+        cliente.logradouro = request.POST.get("logradouro") or cliente.logradouro
+        cliente.numero = request.POST.get("numero") or cliente.numero
+        cliente.complemento = request.POST.get("complemento") or cliente.complemento
+        cliente.bairro = request.POST.get("bairro") or cliente.bairro
+        cliente.cidade = request.POST.get("cidade") or cliente.cidade
+        cliente.uf = request.POST.get("uf") or cliente.uf
+        
+        # Dados adicionais que podem ser necessários
+        cliente.cod_ibge = request.POST.get("cod_ibge") or cliente.cod_ibge
+        
+        try:
+            cliente.save()
+        except IntegrityError as e:
+            return render(request, 'form.html', {'erro': str(e), 'slug': slug, 'cliente': cliente, 'voucher': voucher})
+        
         pedido, erro = salvar_venda(cliente)
         if pedido is not None:
             cliente.pedido.pedido = pedido
             cliente.pedido.save()
-            cliente.save()    
-            Voucher.objects.filter(code=slug).update(is_valid=False)
+            voucher.is_valid = False
+            voucher.save()
             return redirect('gerar_protocolo', pedido=pedido)
         else:
-            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'cliente_existente': cliente_existente})
-    return render(request, 'form.html', {'slug': slug, 'cliente': cliente, 'nome_completo': nome_completo, 'cliente_existente': cliente_existente})
+            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'voucher': voucher})
+    
+    return render(request, 'form.html', {'slug': slug, 'cliente': cliente, 'voucher': voucher})
 
 
 def agendar_videoconferencia(request, pedido=None):
@@ -250,42 +282,83 @@ def get_key_by_value(dictionary, value):
             return key
         
 def gerar_protocolo_view(request, pedido=None):
+    # Verificar se o protocolo já foi gerado
+    status, error = consultar_status_pedido(pedido)
+    if not error and status and status.get("StatusPedido") == 'Protocolo Gerado':
+        return redirect('agendar_videoconferencia', pedido=pedido)
     try:
-        dados_cliente = DadosCliente.objects.get(pedido__pedido=pedido)
+        dados_cliente = DadosCliente.objects.select_related('voucher', 'pedido').get(pedido__pedido=pedido)
+            
     except DadosCliente.DoesNotExist:
         return render(request, 'protocolo.html', {'pedido': pedido, 'erro': 'Cliente não encontrado'})
 
     if request.method == 'POST':
-        cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")
-        cpf = request.POST.get('cpf').replace(".", "").replace("-", "")
-        data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')
-        
-        is_possui_cnh = dados_cliente.possui_cnh
-        print("is_possui_cnh", is_possui_cnh)
-        erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
-        
-        dados_cliente.cnpj = cnpj
-        dados_cliente.cpf = cpf
-        dados_cliente.data_nacimento = data_nascimento
-        dados_cliente.possui_cnh = is_possui_cnh
-        dados_cliente.save()
-        
-        if any('Protocolo emitido com sucesso' in erro['ErrorDescription'] for erro in erros):
-            status, error = consultar_status_pedido(dados_cliente.pedido.pedido)
-            status_dict = dict(Pedidos.STATUS_CHOICES)
-            status_key = get_key_by_value(status_dict, status["StatusPedido"])
-            dados_cliente.pedido.status = status_key
-            dados_cliente.pedido.save()
-            return redirect('agendar_videoconferencia', pedido=pedido)
-        
-        if erros:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
-        
-        if protocolo is not None:
-            return redirect('agendar_videoconferencia', pedido=pedido)
-        else:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
+        try:
+            # Limpar e preparar os dados uma única vez
+            cnpj_cpf = (dados_cliente.cnpj if dados_cliente.voucher.tipo == 'ECNPJ' else dados_cliente.cpf).replace(".", "").replace("-", "").replace("/", "")
+            cpf = request.POST.get('cpf', '').replace(".", "").replace("-", "")
+            
+            try:
+                data_nascimento = datetime.strptime(request.POST.get('data_nascimento', ''), '%d/%m/%Y').strftime('%Y-%m-%d')
+            except ValueError:
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'dados_cliente': dados_cliente,
+                    'erro': 'Data de nascimento inválida'
+                })
 
+            # Validações básicas antes de fazer a requisição
+            if not cpf or not data_nascimento:
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'dados_cliente': dados_cliente,
+                    'erro': 'Todos os campos são obrigatórios'
+                })
+
+            # Fazer a requisição para gerar o protocolo
+            erros, protocolo = gerar_protocolo(pedido, cnpj_cpf, cpf, data_nascimento, dados_cliente.possui_cnh)
+            
+            if erros:
+                # Verificar se o erro indica que o protocolo já foi gerado
+                for erro in erros:
+                    if isinstance(erro, dict):
+                        erro_desc = erro.get('ErrorDescription', '').lower()
+                    else:
+                        erro_desc = str(erro).lower()
+                        
+                    if "protocolo já foi gerado" in erro_desc:
+                        return redirect('agendar_videoconferencia', pedido=pedido)
+                
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'erros': erros, 
+                    'dados_cliente': dados_cliente
+                })
+            
+            if protocolo:
+                # Atualizar status do pedido
+                status, error = consultar_status_pedido(dados_cliente.pedido.pedido)
+                if not error and status:
+                    status_dict = dict(Pedidos.STATUS_CHOICES)
+                    status_key = get_key_by_value(status_dict, status["StatusPedido"])
+                    dados_cliente.pedido.status = status_key
+                    dados_cliente.pedido.save()
+                
+                return redirect('agendar_videoconferencia', pedido=pedido)
+            
+            return render(request, 'protocolo.html', {
+                'pedido': pedido, 
+                'erro': 'Erro ao gerar protocolo', 
+                'dados_cliente': dados_cliente
+            })
+
+        except Exception as e:
+            return render(request, 'protocolo.html', {
+                'pedido': pedido, 
+                'erro': f'Erro inesperado: {str(e)}', 
+                'dados_cliente': dados_cliente
+            })
+    
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
 
 
@@ -467,7 +540,7 @@ def atualizar_empresa(request, voucher):
         # Validação básica dos dados
         errors = []
         if not cnpj or not cep:
-            errors.append('Campos obrigatórios não preenchidos.')
+            errors.append('Campos obrigat��rios não preenchidos.')
         if len(cnpj) != 14:
             errors.append('CNPJ inválido.')
         if len(cep) != 8 or not cep.isdigit():
@@ -595,5 +668,22 @@ def atualizar_status_individual_view(request, cliente_id):
         })
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

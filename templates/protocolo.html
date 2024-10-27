@@ -12,58 +12,41 @@
 
     <form method="post" action="{% url 'gerar_protocolo' pedido=pedido %}">
         {% csrf_token %}
+        {% if dados_cliente.voucher.tipo == 'ECNPJ' %}
+            <div class="form-group">
+                <label for="cnpj">CNPJ</label>
+                <input type="text" class="form-control" id="cnpj" name="cnpj" value="{{ dados_cliente.cnpj }}" required>
+            </div>
+        {% endif %}
         <div class="form-group">
-            <label for="cpf">CPF</label>
+            <label for="cpf">CPF do Responsável</label>
             <input type="text" class="form-control" id="cpf" name="cpf" value="{{ dados_cliente.cpf }}" required>
         </div>
         <div class="form-group">
-            <label for="cnpj">CNPJ</label>
-            <input type="text" class="form-control" id="cnpj" name="cnpj" value="{{ dados_cliente.cnpj }}" required>
-        </div>
-        <div class="form-group">
-            <label for="data_nascimento">Data de Nascimento</label>
-            <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" value="{{ dados_cliente.data_nacimento }}" required>
+            <label for="data_nascimento">Data de Nascimento do Responsável</label>
+            <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" 
+                   placeholder="DD/MM/AAAA" required>
         </div>
         <button type="submit" class="btn btn-primary">Gerar Protocolo</button>
     </form>
 </div>
-<script>
-    var dataNascimento = document.getElementById('data_nascimento');
-    var data = new Date(dataNascimento.value);
-    var opcoes = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    dataNascimento.value = data.toLocaleDateString('pt-BR', opcoes);
-</script>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 <script>
-     $(document).ready(function(){
+    $(document).ready(function(){
         $('#cpf').mask('000.000.000-00', {reverse: true});
         $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
         $('#data_nascimento').mask('00/00/0000');
-        $('#telefone').mask('(00) 0 0000-0000');
-        $('#cep').mask('00000-000');
-        $('#cep').change(function(){
-            var cep = $(this).val().replace('-', '');
-
-            if (cep.length == 8) {
-                $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data){
-                    if (!("erro" in data)) {
-                        $('input[name="logradouro"]').val(data.logradouro);
-                        $('input[name="bairro"]').val(data.bairro);
-                        $('input[name="cidade"]').val(data.localidade);
-                        $('input[name="uf"]').val(data.uf);
-                        $('input[name="codigoIBGE"]').val(data.ibge);
-                    }
-                });
-            }
-        });
     });
 </script>
-{% if mensagem %}
+
+{% if erro %}
 <script>
-alert("{{ mensagem }}");
+    alert("{{ erro }}");
 </script>
 {% endif %}
+
 {% if erros %}
 <script>
     {% for erro in erros %}
@@ -79,8 +62,7 @@ alert("{{ mensagem }}");
 
 {% if erro_protocolo %}
 <script>
-        alert("{{ erro_protocolo }}"); 
-   
+    alert("{{ erro_protocolo }}");
 </script>
 {% endif %}
 </body>
