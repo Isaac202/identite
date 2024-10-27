@@ -105,6 +105,11 @@
                     <label for="uf">UF</label>
                     <input type="text" class="form-control" name="uf" id="uf" value="{{ cliente.uf }}" required>
                 </div>
+                <div class="form-group"></div>
+                    <label for="uf">Cod IBGE</label>
+                    <input type="text" class="form-control" name="cod_ibge" id="cod_ibge" value="{{ cliente.cod_ibge }}" required>
+                </div>
+                
             {% endif %}
 
             <div class="alert alert-info" role="alert">
@@ -195,9 +200,11 @@ alert("{{ erro }}");
                     type: 'GET',
                     success: function(data) {
                         if (!("erro" in data)) {
+                            console.log(data);
                             $('#logradouro').val(data.logradouro);
                             $('#bairro').val(data.bairro);
                             $('#cidade').val(data.localidade);
+                            $('#cod_ibge').val(data.ibge);
                             $('#uf').val(data.uf);
                             // Deixar o campo número em branco para o usuário preencher
                             $('#numero').val('');

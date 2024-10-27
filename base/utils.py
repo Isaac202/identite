@@ -30,6 +30,19 @@ def salvar_venda(cliente):
     CodigoVoucher = cliente.voucher.code
 
     headers = {'Content-Type': 'application/json'}
+    
+    # Determinar o identificador correto (CPF ou CNPJ) e remover máscaras
+    if cliente.voucher.tipo == 'ECPF':
+        identificador = cliente.cpf.replace(".", "").replace("-", "")
+        nome = cliente.nome_completo
+        nome_fantasia = cliente.nome_completo
+        razao_social = cliente.nome_completo
+    else:  # ECNPJ
+        identificador = cliente.cnpj.replace(".", "").replace("-", "").replace("/", "")
+        nome = cliente.razao_social
+        nome_fantasia = cliente.nome_fantasia
+        razao_social = cliente.razao_social
+    print("Antes de enviar para a API")
     payload = {
         "apiKey": apiKey,
         "HashVendedor": HashVendedor,
@@ -37,9 +50,9 @@ def salvar_venda(cliente):
         "FormaPagamento": FormaPagamento,
         "CodigoVoucher": CodigoVoucher,
         "Cliente": {
-            "CNPJCPF": cliente.cpf if cliente.voucher.tipo == 'ECPF' else cliente.cnpj,
-            "NomeRazaoSocial": cliente.nome_completo if cliente.voucher.tipo == 'ECPF' else cliente.razao_social,
-            "NomeFantasia": cliente.nome_completo if cliente.voucher.tipo == 'ECPF' else cliente.nome_fantasia,
+            "CNPJCPF": identificador,
+            "NomeRazaoSocial": razao_social,
+            "NomeFantasia": nome_fantasia,
             "Email": cliente.email,
             "CEP": cliente.cep.replace("-", ""),
             "Logradouro": cliente.logradouro,
@@ -49,15 +62,16 @@ def salvar_venda(cliente):
             "Cidade": cliente.cidade,
             "UF": cliente.uf,
             "CodigoIBGE": cliente.cod_ibge,
-            "DDD": cliente.telefone[0:2],
-            "Telefone": cliente.telefone[2:]
+            "DDD": cliente.telefone[0:2] if cliente.telefone else "",
+            "Telefone": cliente.telefone[2:] if cliente.telefone else ""
         },
         "Produtos": [
             {
-                "HashProduto": "e9eaa186-f11e-4a08-9f22-387c6c60e035" if cliente.voucher.tipo == 'ECNPJ' else "HASH_DO_PRODUTO_ECPF"
+                "HashProduto": "e9eaa186-f11e-4a08-9f22-387c6c60e035" if cliente.voucher.tipo == 'ECNPJ' else "920e5543-d558-445d-b57a-8ed46023bba2"
             }
         ]
     }
+    print("payload", payload)
     response = requests.post(f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
     if response.status_code == 200 and response.text.strip():
         try:
@@ -173,10 +187,15 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
 def create_client_and_order(identificacao, voucher, cep=None):
     # Limpar a identificação (CPF ou CNPJ)
     identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
-    
+    print("identificacao", identificacao)
     # Obter o objeto Voucher
     voucher = Voucher.objects.get(code=voucher)
     
+    # Se for e-CPF, não criar o cliente ainda
+    if voucher.tipo == 'ECPF':
+        return None, None, None
+
+    # A partir daqui, só executa se for e-CNPJ
     # Criar um novo pedido
     novo_pedido = Pedidos(
         pedido=generate_random_code(),
@@ -187,24 +206,27 @@ def create_client_and_order(identificacao, voucher, cep=None):
     # Inicializar novo_cliente com campos básicos
     novo_cliente = DadosCliente(
         pedido=novo_pedido,
-        voucher=voucher
+        voucher=voucher,
+        # Inicializar campos obrigatórios com valores padrão
+        cep='00000000',
+        logradouro='A ser preenchido',
+        bairro='A ser preenchido',
+        cidade='A ser preenchido',
+        uf='SP',  # Valor padrão
+        cod_ibge='0000000',  # Valor padrão
+        numero='SN'
     )
 
-    if voucher.tipo == 'ECNPJ':
-        # Buscar dados da empresa
-        dados = fetch_empresa_data(identificacao)
-        if dados:
-            novo_cliente.nome_completo = dados.get('razao') or 'N/A'
-            novo_cliente.nome_fantasia = dados.get('fantasia') or 'N/A'
-            novo_cliente.razao_social = dados.get('razao') or 'N/A'
-            novo_cliente.cnpj = identificacao
-            cep = cep or dados.get('cep')
-        else:
-            return None, {'error': 'Dados da empresa não encontrados'}, 404
-    else:  # ECPF
-        novo_cliente.cpf = identificacao
-        # Usamos o CEP fornecido como parâmetro
-        cep = cep
+    # Buscar dados da empresa
+    dados = fetch_empresa_data(identificacao)
+    if dados:
+        novo_cliente.nome_completo = dados.get('razao') or 'N/A'
+        novo_cliente.nome_fantasia = dados.get('fantasia') or 'N/A'
+        novo_cliente.razao_social = dados.get('razao') or 'N/A'
+        novo_cliente.cnpj = identificacao
+        cep = cep or dados.get('cep')
+    else:
+        return None, {'error': 'Dados da empresa não encontrados'}, 404
 
     # Se temos CEP, buscar dados de endereço
     if cep:
@@ -212,21 +234,13 @@ def create_client_and_order(identificacao, voucher, cep=None):
         endereco_data = get_address_data(cep)
         if endereco_data:
             novo_cliente.cep = cep
-            novo_cliente.logradouro = endereco_data.get('logradouro') or 'N/A'
+            novo_cliente.logradouro = endereco_data.get('logradouro') or 'A ser preenchido'
             novo_cliente.complemento = endereco_data.get('complemento', '')
-            novo_cliente.bairro = endereco_data.get('bairro') or 'N/A'
+            novo_cliente.bairro = endereco_data.get('bairro') or 'A ser preenchido'
             novo_cliente.numero = 'SN'
-            novo_cliente.cidade = endereco_data.get('localidade') or 'N/A'
-            novo_cliente.uf = endereco_data.get('uf') or 'N/A'
-            novo_cliente.cod_ibge = endereco_data.get('ibge') or 'N/A'
-    else:
-        # Se não temos CEP, deixamos os campos de endereço vazios
-        novo_cliente.cep = ''
-        novo_cliente.logradouro = ''
-        novo_cliente.bairro = ''
-        novo_cliente.cidade = ''
-        novo_cliente.uf = ''
-        novo_cliente.cod_ibge = ''
+            novo_cliente.cidade = endereco_data.get('localidade') or 'A ser preenchido'
+            novo_cliente.uf = endereco_data.get('uf') or 'SP'
+            novo_cliente.cod_ibge = endereco_data.get('ibge') or '0000000'
     
     novo_cliente.save()
     
@@ -324,4 +338,8 @@ def verificar_agendamento(hash_venda):
             return None, ["JSONDecodeError: A resposta não é um JSON válido"]
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+
+
+
+
 
