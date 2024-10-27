@@ -19,15 +19,6 @@
                 padding: 10px;
             }
         }
-        .preview-image, .preview-pdf {
-            display: none;
-            width: 100%;
-            height: auto;
-            margin-top: 10px;
-        }
-        .preview-pdf {
-            height: 500px; /* Define a height for PDF preview */
-        }
     </style>
 </head>
 <body>
@@ -35,10 +26,10 @@
     <h2 class="mt-5">Preencha o Formulário</h2>
 
     <div class="progress mb-4">
-        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
 
-    <form id="dataForm" method="post" action="{% url 'form' slug=slug %}" enctype="multipart/form-data">
+    <form id="dataForm" method="post" action="{% url 'form' slug=slug %}">
         {% csrf_token %}
 
         <div id="section1">
@@ -53,34 +44,20 @@
             </div>
             <div class="form-group">
                 <label for="telefone">Telefone (Whatsapp)</label>
-                <input name="telefone" type="telefone" class="form-control" id="telefone" placeholder='(00) 0 0000-0000' required>
-            </div>
-            <button type="button" class="btn btn-primary" onclick="nextSection(2)">Próximo</button>
-        </div>
-        <div id="section2" class="hidden">
-            <h3>Documentos</h3>
-            <p>Por favor, envie ou a Carteira de Habilitação ou o RG (frente e verso).</p>
-            <div class="form-group">
-                <label for="cnh">Carteira de Habilitação</label>
-                <input type="file" id="cnh" class="form-control" name="cnh" placeholder="Carteira de Habilitação" accept="image/jpeg, image/png, image/jpg, application/pdf">
-                <img src="https://images.noticiasautomotivas.com.br/img/f/cnh-carteira-nacional-habilitacao.jpg" alt="Exemplo de CNH" style="width: 100%; height: auto;" onclick="document.getElementById('cnh').click();">
-                <img id="preview-cnh" class="preview-image" alt="Pré-visualização da CNH">
-                <iframe id="preview-cnh-pdf" class="preview-pdf" frameborder="0"></iframe>
+                <input name="telefone" type="tel" class="form-control" id="telefone" placeholder='(00) 0 0000-0000' required>
             </div>
             <div class="form-group">
-                <label for="rg-frente">RG Frente</label>
-                <input type="file" class="form-control" name="rg-frente" placeholder="RG Frente" accept="image/jpeg, image/png, image/jpg, application/pdf">
-                <img id="preview-rg-frente" class="preview-image" alt="Pré-visualização do RG Frente">
-                <iframe id="preview-rg-frente-pdf" class="preview-pdf" frameborder="0"></iframe>
+                <label for="possui_cnh">Possui CNH?</label>
+                <select class="form-control" name="possui_cnh" id="possui_cnh" required>
+                    <option value="">Selecione uma opção</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Não</option>
+                </select>
             </div>
-            <div class="form-group">
-                <label for="rg-verso">RG Verso</label>
-                <input type="file" class="form-control" name="rg-verso" placeholder="RG Verso" accept="image/jpeg, image/png, image/jpg, application/pdf">
-                <img id="preview-rg-verso" class="preview-image" alt="Pré-visualização do RG Verso">
-                <iframe id="preview-rg-verso-pdf" class="preview-pdf" frameborder="0"></iframe>
+            <div class="alert alert-info" role="alert">
+                <strong>Atenção:</strong> Você precisará apresentar seus documentos (RG ou CNH) à equipe que entrará em contato com você pelo WhatsApp.
             </div>
-            <button type="button" class="btn btn-secondary" onclick="prevSection(2)">Anterior</button>
-            <button type="submit" class="btn btn-primary mt-3">Enviar</button>
+            <button type="submit" class="btn btn-primary">Enviar</button>
         </div>
     </form>
 </div>
@@ -108,26 +85,6 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="imagePreviewModal" tabindex="-1" role="dialog" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="imagePreviewModalLabel">Pré-visualização do Arquivo</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modal-image" src="" class="img-fluid" alt="Pré-visualização da Imagem">
-                <iframe id="modal-pdf" class="preview-pdf" frameborder="0"></iframe>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Não</button>
-                <button type="button" class="btn btn-primary" id="confirmImage">Sim</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
@@ -139,30 +96,11 @@ alert("{{ erro }}");
 {% endif %}
 <script>
     $(document).ready(function(){
-        $('#cpf').mask('000.000.000-00', {reverse: true});
-        $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
-        $('#data_nacimento').mask('00/00/0000');
         $('#telefone').mask('(00) 0 0000-0000');
-        $('#cep').mask('00000-000');
-        $('#cep').change(function(){
-            var cep = $(this).val().replace('-', '');
-            if (cep.length == 8) {
-                $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data){
-                    if (!("erro" in data)) {
-                        $('input[name="logradouro"]').val(data.logradouro);
-                        $('input[name="bairro"]').val(data.bairro);
-                        $('input[name="cidade"]').val(data.localidade);
-                        $('input[name="uf"]').val(data.uf);
-                        $('input[name="codigoIBGE"]').val(data.ibge);
-                    }
-                });
-            }
-        });
-    });
+        $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
 
-    let currentSection = 1;
-// Verifica se o cliente existe
-var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
+        // Verifica se o cliente existe
+        var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
         if (!clienteExistente) {
             // Se o cliente não existir, exibe o modal
             $('#cnpjModal').modal({
@@ -171,134 +109,6 @@ var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
             });
         }
 
-    function updateProgressBar() {
-        const progress = (currentSection / 2) * 100;
-        document.getElementById('progressBar').style.width = progress + '%';
-    }
-
-    function validateSection(sectionId) {
-        const inputs = document.querySelectorAll(`#section${sectionId} input[required]`);
-        for (const input of inputs) {
-            if (!input.value) {
-                alert(`Por favor, preencha o campo: ${input.previousElementSibling.innerText}`);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function nextSection(next) {
-        if (validateSection(currentSection)) {
-            document.getElementById('section' + currentSection).classList.add('hidden');
-            currentSection = next;
-            document.getElementById('section' + currentSection).classList.remove('hidden');
-            updateProgressBar();
-        }
-    }
-
-    function prevSection(prev) {
-        document.getElementById('section' + currentSection).classList.add('hidden');
-        currentSection = prev;
-        document.getElementById('section' + currentSection).classList.remove('hidden');
-        updateProgressBar();
-    }
-
-    function validateDocumentsSection() {
-        const rgFrente = document.querySelector('input[name="rg-frente"]').files.length;
-        const rgVerso = document.querySelector('input[name="rg-verso"]').files.length;
-        const cnh = document.querySelector('input[name="cnh"]').files.length;
-        if (cnh === 0 && (rgFrente === 0 || rgVerso === 0)) {
-            alert('Por favor, envie a CNH ou ambos os lados do RG.');
-            return false;
-        }
-        return true;
-    }
-
-    document.getElementById('dataForm').addEventListener('submit', function(event) {
-        if (!validateSection(currentSection) || !validateDocumentsSection()) {
-            event.preventDefault();
-        } else {
-            if (!confirm('Tem certeza de que deseja enviar o formulário?')) {
-                event.preventDefault();
-            }
-        }
-    });
-
-    document.getElementById('section2').addEventListener('change', validateDocumentsSection);
-
-    function validateImage(fileInput) {
-        const file = fileInput.files[0];
-        const validFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-
-        if (file) {
-            if (!validFileTypes.includes(file.type)) {
-                alert('Por favor, envie uma imagem válida (JPEG, PNG) ou PDF.');
-                fileInput.value = '';
-                return false;
-            } else {
-                previewFile(fileInput);
-            }
-        }
-        return true;
-    }
-
-    function previewFile(fileInput) {
-        const previewImage = document.getElementById('preview-' + fileInput.name);
-        const previewPdf = document.getElementById('preview-' + fileInput.name + '-pdf');
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-
-        reader.onloadend = function () {
-            if (file.type === 'application/pdf') {
-                previewPdf.src = reader.result;
-                previewPdf.style.display = 'block';
-                previewImage.style.display = 'none';
-
-                document.getElementById('modal-image').style.display = 'none';
-                document.getElementById('modal-pdf').src = reader.result;
-                document.getElementById('modal-pdf').style.display = 'block';
-            } else {
-                previewImage.src = reader.result;
-                previewImage.style.display = 'block';
-                previewPdf.style.display = 'none';
-
-                document.getElementById('modal-pdf').style.display = 'none';
-                document.getElementById('modal-image').src = reader.result;
-                document.getElementById('modal-image').style.display = 'block';
-            }
-            $('#imagePreviewModal').modal('show');
-
-            document.getElementById('confirmImage').onclick = function() {
-                $('#imagePreviewModal').modal('hide');
-                return true;
-            }
-
-            $('.modal-footer .btn-secondary').click(function() {
-                fileInput.value = '';
-                previewImage.style.display = 'none';
-                previewPdf.style.display = 'none';
-                $('#imagePreviewModal').modal('hide');
-                return false;
-            });
-        }
-
-        if (file) {
-            reader.readAsDataURL(file);
-        } else {
-            previewImage.src = '';
-            previewImage.style.display = 'none';
-            previewPdf.src = '';
-            previewPdf.style.display = 'none';
-        }
-    }
-
-    document.querySelectorAll('input[type="file"]').forEach(input => {
-        input.addEventListener('change', function() {
-            validateImage(this);
-        });
-    });
-
-    $(document).ready(function(){
         $('#cnpj').change(function(){
             var cnpj = $(this).val().replace(/[^0-9]/g, ''); // Remove non-numeric characters
             if (cnpj.length == 14) {
@@ -315,6 +125,28 @@ var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
             }
         });
     });
+
+    document.getElementById('dataForm').addEventListener('submit', function(event) {
+        if (!validateForm()) {
+            event.preventDefault();
+        } else {
+            if (!confirm('Tem certeza de que deseja enviar o formulário?')) {
+                event.preventDefault();
+            }
+        }
+    });
+
+    function validateForm() {
+        var isValid = true;
+        document.querySelectorAll('#dataForm [required]').forEach(function(element) {
+            if (element.value.trim() === '') {
+                alert(`Por favor, preencha o campo ${element.name}.`);
+                isValid = false;
+                return false;
+            }
+        });
+        return isValid;
+    }
 </script>
 </body>
 </html>

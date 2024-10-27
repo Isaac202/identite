@@ -165,7 +165,7 @@ def form(request, slug=None):
             return redirect(request.path)
         
         cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-
+        
         if request.POST["nomeCompleto"].strip():
             cliente.nome_completo = request.POST["nomeCompleto"]
         if request.POST["email"].strip():
@@ -173,36 +173,22 @@ def form(request, slug=None):
         if request.POST["telefone"].strip():
             telefone = request.POST["telefone"].replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
             cliente.telefone = telefone
+        
+        # Adicione esta parte para salvar a informação sobre CNH
+        possui_cnh = request.POST.get("possui_cnh")
+        if possui_cnh:
+            cliente.possui_cnh = possui_cnh == "sim"
     
         pedido, erro = salvar_venda(cliente)
         if pedido is not None:
             cliente.pedido.pedido = pedido
             cliente.pedido.save()
-            cliente.save()
-            def encode_file_to_base64(file):
-                return base64.b64encode(file.read()).decode('utf-8')
-
-            rg_frente_b64 = None
-            rg_verso_b64 = None
-            cnh_b64 = None
-
-            if "rg-frente" in request.FILES:
-                rg_frente_b64 = encode_file_to_base64(request.FILES["rg-frente"])
-                
-            if "rg-verso" in request.FILES:
-                rg_verso_b64 = encode_file_to_base64(request.FILES["rg-verso"])
-        
-            if "cnh" in request.FILES:
-                cnh_b64 = encode_file_to_base64(request.FILES["cnh"])
-
-            # Chama a tarefa Celery para salvar os arquivos
-            salvar_arquivos_cliente.delay(cliente.id, rg_frente_b64, rg_verso_b64, cnh_b64)
-    
+            cliente.save()    
             Voucher.objects.filter(code=slug).update(is_valid=False)
             return redirect('gerar_protocolo', pedido=pedido)
         else:
             return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'cliente_existente': cliente_existente})
-    return render(request, 'form.html', {'slug': slug, 'cliente': cliente,'nome_completo': nome_completo, 'cliente_existente': cliente_existente})
+    return render(request, 'form.html', {'slug': slug, 'cliente': cliente, 'nome_completo': nome_completo, 'cliente_existente': cliente_existente})
 
 
 def agendar_videoconferencia(request, pedido=None):
@@ -264,24 +250,26 @@ def get_key_by_value(dictionary, value):
             return key
         
 def gerar_protocolo_view(request, pedido=None):
-    dados_cliente = DadosCliente.objects.get(pedido__pedido=pedido)
-    if request.method == 'POST':
-        cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")  # Remove a máscara do CNPJ
-        cpf = request.POST.get('cpf').replace(".", "").replace("-", "")  # Remove a máscara do CPF
-        data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')  # Altera o formato da data
-        
-        # Pega os outros dados do objeto dados_cliente
-        pedido = dados_cliente.pedido.pedido
-        is_possui_cnh = True if dados_cliente.carteira_habilitacao else False   
-
-        erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
+    try:
         dados_cliente = DadosCliente.objects.get(pedido__pedido=pedido)
+    except DadosCliente.DoesNotExist:
+        return render(request, 'protocolo.html', {'pedido': pedido, 'erro': 'Cliente não encontrado'})
+
+    if request.method == 'POST':
+        cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")
+        cpf = request.POST.get('cpf').replace(".", "").replace("-", "")
+        data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')
+        
+        is_possui_cnh = dados_cliente.possui_cnh
+        print("is_possui_cnh", is_possui_cnh)
+        erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
+        
         dados_cliente.cnpj = cnpj
         dados_cliente.cpf = cpf
         dados_cliente.data_nacimento = data_nascimento
+        dados_cliente.possui_cnh = is_possui_cnh
         dados_cliente.save()
         
-        status_pedido = consultar_status_pedido(pedido)
         if any('Protocolo emitido com sucesso' in erro['ErrorDescription'] for erro in erros):
             status, error = consultar_status_pedido(dados_cliente.pedido.pedido)
             status_dict = dict(Pedidos.STATUS_CHOICES)
@@ -291,11 +279,13 @@ def gerar_protocolo_view(request, pedido=None):
             return redirect('agendar_videoconferencia', pedido=pedido)
         
         if erros:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros})
+            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
+        
         if protocolo is not None:
-            return render(request, 'agendar_videoconferencia.html', {'pedido': pedido})
+            return redirect('agendar_videoconferencia', pedido=pedido)
         else:
-            return render(request, 'protocolo.html', {'pedido': pedido,'erros': erros})
+            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
+
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
 
 
@@ -605,3 +595,5 @@ def atualizar_status_individual_view(request, cliente_id):
         })
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+
+

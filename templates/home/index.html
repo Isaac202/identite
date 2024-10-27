@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const formData = new FormData(filterForm);
     const searchParams = new URLSearchParams(formData);
-    const url = '/update_status/?' + searchParams.toString();
+    const url = '/update_status_view/?' + searchParams.toString();
 
     fetch(url, {
       method: 'POST',
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Error:', error);
-      alert('Erro ao atualizar status');
+      alert('Erro ao atualizar status fg');
     })
     .finally(() => {
       // Reativa o botão e esconde o spinner

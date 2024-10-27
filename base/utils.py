@@ -114,7 +114,7 @@ def obter_disponibilidade_agenda():
     payload = {
        "apiKey": API_KEY,
         "DataInicial": "2024-06-27",
-        "DataFinal": "2024-09-29",
+        "DataFinal": "2024-10-29",
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     }
 
@@ -163,7 +163,9 @@ def create_client_and_order(cnpj, voucher):
     # Obter dados de endereço pelo CEP
     cep = empresa_data.get('cep')
     cep = cep.replace(".", "").replace("-", "").replace(" ", "")
+    print(cep)
     endereco_data = get_address_data(cep)
+    print(endereco_data)    
     if not endereco_data:
         return None, {'error': 'Dados de endereço não encontrados'}, 404
 
@@ -258,9 +260,10 @@ def verifica_se_pode_videoconferecias(cliente):
     }
     response = requests.post(endpoint, data=json.dumps(payload), headers=headers)
     data = response.json()
-    if not data.get('IsOk', True) and not cliente.carteira_habilitacao:
-        return False
-    return True
+    print("data", data)
+    # Retorna True se data['IsOk'] for True ou se cliente.possui_cnh for True
+    # Retorna False apenas se ambos forem False
+    return data.get('IsOk', False) or cliente.possui_cnh
 
 def fetch_empresa_data(cnpj):
     CPFCNPJ_API_KEY = settings.CPFCNPJ

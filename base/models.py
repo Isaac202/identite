@@ -81,12 +81,7 @@ class DadosCliente(BaseModel):
     cod_ibge = models.CharField(max_length=10)
     telefone = models.CharField(max_length=20,blank=True, null=True)
     data_nacimento = models.CharField(max_length=100,blank=True, null=True)
-    rg_frente = models.FileField(
-        upload_to=upload_image_book, blank=True, null=True)
-    rg_verso = models.FileField(
-        upload_to=upload_image_book, blank=True, null=True)
-    carteira_habilitacao = models.FileField(
-        upload_to=upload_image_book, blank=True, null=True)
+    possui_cnh = models.BooleanField(default=False)
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)
 
