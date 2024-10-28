@@ -24,6 +24,9 @@ class Lote(models.Model):
                 self.numero = max_numero + 1
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f'Lote Nº: {self.numero}'
+
 class Voucher(BaseModel):
     TIPO_CHOICES = [
         ('ECNPJ', 'e-CNPJ'),

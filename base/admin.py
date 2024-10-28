@@ -7,9 +7,12 @@ from django.http import HttpResponse
 
 admin.site.register(Pedidos)
 
+@admin.register(Voucher)
 class VoucherAdmin(admin.ModelAdmin):
-    search_fields= ['code']
-    list_display = ['code','is_valid']
+    list_display = ('code', 'tipo', 'is_valid', 'lote', 'created_at')
+    list_filter = ('tipo', 'is_valid', 'created_at')
+    search_fields = ('code',)
+    ordering = ('-created_at',)
 
 
 class DadosClienteAdmin(admin.ModelAdmin):
@@ -36,7 +39,6 @@ class DadosClienteAdmin(admin.ModelAdmin):
         workbook = openpyxl.Workbook()
         sheet = workbook.active
         sheet.title = 'Dados Clientes'
-
         # Cabeçalhos
         headers = ['Nome', 'CNPJ', 'razao_social','Voucher', 'Data de Atualização']
         sheet.append(headers)
@@ -82,4 +84,3 @@ class DadosClienteAdmin(admin.ModelAdmin):
 # Registrar o modelo e a classe do admin
 admin.site.register(DadosCliente, DadosClienteAdmin)
 
-admin.site.register(Voucher,VoucherAdmin)
