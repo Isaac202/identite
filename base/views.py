@@ -495,8 +495,7 @@ def create_client_and_assign_voucher(request):
                 'tipo_solicitado': tipo_voucher
             }, status=500)
     
-    # Inativar o voucher
-    voucher.is_valid = False
+    
     voucher.save()
     
     return JsonResponse({
