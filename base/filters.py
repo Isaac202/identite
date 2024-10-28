@@ -4,13 +4,20 @@ from .models import DadosCliente, Pedidos
 from .models import Voucher
 
 class VoucherFilter(django_filters.FilterSet):
-    start_date = django_filters.DateFilter(field_name="created_at", lookup_expr='gte')
-    end_date = django_filters.DateFilter(field_name="created_at", lookup_expr='lte')
+    tipo = django_filters.ChoiceFilter(
+        choices=Voucher.TIPO_CHOICES,
+        empty_label="Todos",
+        method='filter_tipo'
+    )
+
+    def filter_tipo(self, queryset, name, value):
+        if value:
+            return queryset.filter(tipo=value)
+        return queryset
 
     class Meta:
         model = Voucher
-        fields = ['start_date', 'end_date']
-
+        fields = ['tipo']
 
 class DadosClienteFilter(django_filters.FilterSet):
     start_date = django_filters.DateFilter(field_name='created_at', lookup_expr='gte', widget=forms.DateInput(attrs={'type': 'date'}))

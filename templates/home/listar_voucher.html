@@ -16,25 +16,14 @@
         <p class="card-category">Aqui estão todos os vouchers cadastrados</p>
       </div>
       <div class="card-body">
-        <form style="max-width: 180px;" method="get" class="mb-3">
-          {% for field in filter.form %}
-            <div class="form-group">
-              {% if field.name == "start_date" %}
-                <label for="{{ field.auto_id }}">Data de início:</label>
-              {% elif field.name == "end_date" %}
-                <label for="{{ field.auto_id }}">Data de término:</label>
-              {% else %}
-                <label for="{{ field.auto_id }}">{{ field.label }}</label>
-              {% endif %}
-              {% if field.name == "start_date" or field.name == "end_date" %}
-                <input type="date" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% else %}
-                <input type="{{ field.field.widget.input_type }}" id="{{ field.auto_id }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-              {% endif %}
-            </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary">Filtrar</button>
-        </form>
+        <div class="form-group" style="max-width: 180px;">
+          <label for="tipo">Tipo de Voucher</label>
+          <select class="form-control" id="tipo-filter">
+            <option value="">Todos</option>
+            <option value="ECNPJ">e-CNPJ</option>
+            <option value="ECPF">e-CPF</option>
+          </select>
+        </div>
         <div class="table-responsive">
           <input type="text" id="search-input" class="form-control mb-3" placeholder="Pesquisar vouchers...">
           <button id="download-btn" type="button" class="btn btn-primary">
@@ -44,6 +33,7 @@
             <thead class="text-primary">
               <th>ID</th>
               <th>Código</th>
+              <th>Tipo</th>
               <th>É válido</th>
               <th>Excluir</th>
             </thead>
@@ -52,6 +42,7 @@
               <tr data-id="{{ voucher.id }}">
                 <td>{{ voucher.id }}</td>
                 <td style="cursor: pointer;" class="voucher-code">{{ voucher.code }}</td>
+                <td>{{ voucher.get_tipo_display }}</td>
                 <td><input type="checkbox" class="toggle-validity" data-id="{{ voucher.id }}" {% if voucher.is_valid %}checked{% endif %}></td>
                 <td>
                   <i class="fa fa-times delete-icon" data-id="{{ voucher.id }}"></i>
@@ -155,6 +146,7 @@
       newRow.innerHTML = `
         <td>${voucher.id}</td>
         <td class="voucher-code" style="cursor: pointer;">${voucher.code}</td>
+        <td>${voucher.tipo}</td>
         <td><input type="checkbox" class="toggle-validity" data-id="${voucher.id}" ${voucher.is_valid ? 'checked' : ''}></td>
         <td>
           <i class="fa fa-times delete-icon" data-id="${voucher.id}"></i>
@@ -250,50 +242,132 @@
     document.querySelectorAll('#voucher-table-body tr').forEach(attachEventListeners);
   });
 </script>
+<!-- Primeiro carregamos o jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Depois outros scripts que dependem do jQuery -->
 <script src="https://unpkg.com/file-saver"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/tableexport.jquery.plugin/tableexport.min.js"></script>
-<script>
- document.getElementById('download-btn').addEventListener('click', function() {
-  let table = document.getElementsByClassName('table')[0];
-  let wb = XLSX.utils.table_to_book(table, {sheet:"Sheet JS"});
-  let wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
-  saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'dados.xlsx');
-});
-
-function s2ab(s) {
-  var buf = new ArrayBuffer(s.length);
-  var view = new Uint8Array(buf);
-  for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-  return buf;
-}
-</script>
 
 <script>
-$(document).ready(function() {
-    $('#voucher-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        $.ajax({
-            url: '{% url "create_voucher" %}',
-            type: 'POST',
-            data: {
-                'quantity': $('#quantity').val(),
-                'tipo': $('#tipo').val(),
-                'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val()
-            },
-            success: function(response) {
-                location.reload();
-            },
-            error: function(xhr, errmsg, err) {
-                console.log(xhr.status + ": " + xhr.responseText);
-            }
+    $(document).ready(function() {
+        function attachEventListeners(row) {
+            // ... (código existente do attachEventListeners) ...
+        }
+
+        // Adicionar o evento de mudança no select
+        $('#tipo-filter').change(function() {
+            const tipo = $(this).val();
+            
+            // Fazer a requisição AJAX com headers corretos
+            $.ajax({
+                url: window.location.pathname,
+                type: 'GET',
+                data: {
+                    'tipo': tipo
+                },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    $('#voucher-table-body').html(response);
+                    // Reattach event listeners nas novas linhas
+                    $('#voucher-table-body tr').each(function() {
+                        attachEventListeners(this);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro ao filtrar vouchers:', error);
+                }
+            });
         });
+
+        // Inicializar event listeners nas linhas existentes
+        $('#voucher-table-body tr').each(function() {
+            attachEventListeners(this);
+        });
+
+        // Função para download do Excel
+        document.getElementById('download-btn').addEventListener('click', function() {
+            let table = document.getElementsByClassName('table')[0];
+            let wb = XLSX.utils.table_to_book(table, {sheet:"Sheet JS"});
+            let wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
+            saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'dados.xlsx');
+        });
+
+        function s2ab(s) {
+            var buf = new ArrayBuffer(s.length);
+            var view = new Uint8Array(buf);
+            for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
     });
-});
 </script>
 
 {% endblock content %}
 
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+<!-- Primeiro carregamos o jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Depois outros scripts que dependem do jQuery -->
+<script src="https://unpkg.com/file-saver"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/tableexport.jquery.plugin/tableexport.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        function attachEventListeners(row) {
+            // ... (código existente do attachEventListeners) ...
+        }
+
+        // Adicionar o evento de mudança no select
+        $('#tipo-filter').change(function() {
+            const tipo = $(this).val();
+            
+            // Fazer a requisição AJAX com headers corretos
+            $.ajax({
+                url: window.location.pathname,
+                type: 'GET',
+                data: {
+                    'tipo': tipo
+                },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    $('#voucher-table-body').html(response);
+                    // Reattach event listeners nas novas linhas
+                    $('#voucher-table-body tr').each(function() {
+                        attachEventListeners(this);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro ao filtrar vouchers:', error);
+                }
+            });
+        });
+
+        // Inicializar event listeners nas linhas existentes
+        $('#voucher-table-body tr').each(function() {
+            attachEventListeners(this);
+        });
+
+        // Função para download do Excel
+        document.getElementById('download-btn').addEventListener('click', function() {
+            let table = document.getElementsByClassName('table')[0];
+            let wb = XLSX.utils.table_to_book(table, {sheet:"Sheet JS"});
+            let wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
+            saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'dados.xlsx');
+        });
+
+        function s2ab(s) {
+            var buf = new ArrayBuffer(s.length);
+            var view = new Uint8Array(buf);
+            for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
+    });
+</script>
+{% endblock javascripts %}

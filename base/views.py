@@ -352,8 +352,13 @@ def gerar_protocolo_view(request, pedido=None):
 
 @login_required
 def list_vouchers(request):
-    voucher_list = Voucher.objects.filter(is_valid=True)
+    voucher_list = Voucher.objects.filter(is_valid=True)[:50]
     voucher_filter = VoucherFilter(request.GET, queryset=voucher_list)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Se for uma requisição AJAX, retornar apenas a parte da tabela
+        return render(request, 'home/voucher_table_rows.html', {'filter': voucher_filter})
+    
     return render(request, 'home/listar_voucher.html', {'filter': voucher_filter})
 
 
@@ -686,6 +691,7 @@ def voucher_statistics(request):
     }
 
     return render(request, 'home/index.html', context)
+
 
 
 

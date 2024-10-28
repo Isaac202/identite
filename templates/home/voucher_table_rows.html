@@ -1,0 +1,11 @@
+{% for voucher in filter.qs %}
+<tr data-id="{{ voucher.id }}">
+    <td>{{ voucher.id }}</td>
+    <td style="cursor: pointer;" class="voucher-code">{{ voucher.code }}</td>
+    <td>{{ voucher.get_tipo_display }}</td>
+    <td><input type="checkbox" class="toggle-validity" data-id="{{ voucher.id }}" {% if voucher.is_valid %}checked{% endif %}></td>
+    <td>
+        <i class="fa fa-times delete-icon" data-id="{{ voucher.id }}"></i>
+    </td>
+</tr>
+{% endfor %}
