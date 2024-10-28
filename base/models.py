@@ -25,12 +25,17 @@ class Lote(models.Model):
         super().save(*args, **kwargs)
 
 class Voucher(BaseModel):
+    TIPO_CHOICES = [
+        ('ECNPJ', 'e-CNPJ'),
+        ('ECPF', 'e-CPF'),
+    ]
     code = models.CharField(max_length=255, unique=True)  # Aumente o tamanho para armazenar o voucher encriptado
     lote = models.ForeignKey(Lote, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
+    tipo = models.CharField(max_length=5, choices=TIPO_CHOICES, default='ECNPJ')
 
     def __str__(self):
-        return self.code
+        return f"{self.code} ({self.get_tipo_display()})"
 
 
 
@@ -66,21 +71,21 @@ class Pedidos(BaseModel):
 
 class DadosCliente(BaseModel):
     nome_completo = models.CharField(max_length=255)
-    nome_fantasia = models.CharField(max_length=255)
-    razao_social = models.CharField(max_length=255)
-    cpf = models.CharField(max_length=14,blank=True, null=True)
-    cnpj = models.CharField(max_length=14)
+    nome_fantasia = models.CharField(max_length=255, blank=True, null=True)
+    razao_social = models.CharField(max_length=255, blank=True, null=True)
+    cpf = models.CharField(max_length=14, blank=True, null=True)
+    cnpj = models.CharField(max_length=14, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     cep = models.CharField(max_length=14)
     logradouro = models.CharField(max_length=255)
     numero = models.CharField(max_length=10)
-    complemento = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255, blank=True, null=True)
     bairro = models.CharField(max_length=255)
     cidade = models.CharField(max_length=255)
     uf = models.CharField(max_length=10)
     cod_ibge = models.CharField(max_length=10)
-    telefone = models.CharField(max_length=20,blank=True, null=True)
-    data_nacimento = models.CharField(max_length=100,blank=True, null=True)
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+    data_nacimento = models.CharField(max_length=100, blank=True, null=True)
     possui_cnh = models.BooleanField(default=False)
     pedido = models.ForeignKey(Pedidos, on_delete=models.CASCADE)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE)

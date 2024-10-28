@@ -6,7 +6,6 @@
     <title>CERTIFICADO DIGITAL</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <style>
         body {
             font-size: 1.25rem; /* Aumenta o tamanho da fonte */
@@ -22,28 +21,22 @@
         <form id="voucherForm" method="post" class="mt-5"> <!-- Adiciona margem superior -->
             {% csrf_token %}
             <div class="form-group">
-                <label for="cnpj">Insira seu CNPJ</label>
-                <input type="text" class="form-control form-control-lg" id="cnpj" name="cnpj" required> <!-- Campo de entrada para o CNPJ -->
+                <label for="voucher_code">Código do Voucher</label>
+                <input type="text" class="form-control" id="voucher_code" name="voucher_code" required> <!-- Aumenta o tamanho do campo de entrada -->
             </div>
-            <div class="form-group">
-                <label for="voucher_code">Insira seu Voucher</label>
-                <input type="text" class="form-control form-control-lg" id="voucher_code" name="voucher_code" required> <!-- Aumenta o tamanho do campo de entrada -->
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Verificar Voucher</button> <!-- Aumenta o tamanho do botão e faz ele ocupar toda a largura -->
+            <button type="submit" class="btn btn-primary">Verificar</button> <!-- Aumenta o tamanho do botão e faz ele ocupar toda a largura -->
         </form>
     </div>
 
     <script>
         $(document).ready(function(){
-            $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
-        });
-
-        document.getElementById('voucherForm').addEventListener('submit', function(event) {
-            var cnpjInput = document.getElementById('cnpj');
-            cnpjInput.value = cnpjInput.value.replace(/\D+/g, ''); // Remove todos os caracteres não numéricos
-
-            var voucherInput = document.getElementById('voucher_code');
-            voucherInput.value = voucherInput.value.replace(/\s+/g, ''); // Remove todos os espaços
+            $('#voucherForm').submit(function(e){
+                var voucher = $('#voucher_code').val().trim();
+                if(voucher === ''){
+                    alert('Por favor, insira o código do voucher.');
+                    e.preventDefault();
+                }
+            });
         });
     </script>
 </body>

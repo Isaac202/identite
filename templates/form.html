@@ -33,27 +33,85 @@
         {% csrf_token %}
 
         <div id="section1">
-            <h3>Olá {{nome_completo}}, por favor complete seus dados</h3>
-            <div class="form-group">
-                <label for="nomeCompleto">Nome Completo</label>
-                <input type="text" class="form-control" name="nomeCompleto" placeholder="Nome Completo" required>
-            </div>
+            <h3>Olá, por favor complete seus dados</h3>
+            
+            {% if voucher.tipo == 'ECNPJ' %}
+                <div class="form-group">
+                    <label for="nomeFantasia">Nome Fantasia</label>
+                    <input type="text" class="form-control" name="nomeFantasia" value="{{ cliente.nome_fantasia }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="razaoSocial">Razão Social</label>
+                    <input type="text" class="form-control" name="razaoSocial" value="{{ cliente.razao_social }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="cnpj">CNPJ</label>
+                    <input id="cnpj" type="text" class="form-control" name="cnpj" value="{{ cliente.cnpj }}" required>
+                </div>
+            {% else %}
+                <div class="form-group">
+                    <label for="nomeCompleto">Nome Completo</label>
+                    <input type="text" class="form-control" name="nomeCompleto" value="{{ cliente.nome_completo }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="cpf">CPF</label>
+                    <input id="cpf" type="text" class="form-control" name="cpf" value="{{ cliente.cpf }}" required>
+                </div>
+            {% endif %}
+
             <div class="form-group">
                 <label for="email">Email</label>
-                <input name="email" type="email" class="form-control" id="email" placeholder="email@exemplo.com" required>
+                <input name="email" type="email" class="form-control" id="email" required>
             </div>
             <div class="form-group">
                 <label for="telefone">Telefone (Whatsapp)</label>
-                <input name="telefone" type="tel" class="form-control" id="telefone" placeholder='(00) 0 0000-0000' required>
+                <input name="telefone" type="tel" class="form-control" id="telefone" value="{{ cliente.telefone }}" required>
             </div>
             <div class="form-group">
                 <label for="possui_cnh">Possui CNH?</label>
                 <select class="form-control" name="possui_cnh" id="possui_cnh" required>
                     <option value="">Selecione uma opção</option>
-                    <option value="sim">Sim</option>
-                    <option value="nao">Não</option>
+                    <option value="sim" {% if cliente.possui_cnh %}selected{% endif %}>Sim</option>
+                    <option value="nao" {% if not cliente.possui_cnh %}selected{% endif %}>Não</option>
                 </select>
             </div>
+
+            {% if voucher.tipo == 'ECPF' %}
+                <div class="form-group">
+                    <label for="cep">CEP</label>
+                    <input type="text" class="form-control" name="cep" id="cep" value="{{ cliente.cep }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="logradouro">Logradouro</label>
+                    <input type="text" class="form-control" name="logradouro" id="logradouro" value="{{ cliente.logradouro }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="numero">Número</label>
+                    <input type="text" class="form-control" name="numero" id="numero" value="{{ cliente.numero }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="complemento">Complemento</label>
+                    <input type="text" class="form-control" name="complemento" id="complemento" value="{{ cliente.complemento }}">
+                </div>
+                <div class="form-group">
+                    <label for="bairro">Bairro</label>
+                    <input type="text" class="form-control" name="bairro" id="bairro" value="{{ cliente.bairro }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="cidade">Cidade</label>
+                    <input type="text" class="form-control" name="cidade" id="cidade" value="{{ cliente.cidade }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="uf">UF</label>
+                    <input type="text" class="form-control" name="uf" id="uf" value="{{ cliente.uf }}" required>
+                </div>
+                <div class="form-group"></div>
+                    <label for="uf">Cod IBGE</label>
+                    <input type="text" class="form-control" name="cod_ibge" id="cod_ibge" value="{{ cliente.cod_ibge }}" required>
+                </div>
+                
+            {% endif %}
+
             <div class="alert alert-info" role="alert">
                 <strong>Atenção:</strong> Você precisará apresentar seus documentos (RG ou CNH) à equipe que entrará em contato com você pelo WhatsApp.
             </div>
@@ -62,24 +120,38 @@
     </form>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="cnpjModal" tabindex="-1" role="dialog" aria-labelledby="cnpjModalLabel" aria-hidden="true">
+<!-- Modal para CNPJ/CPF -->
+<div class="modal fade" id="identificacaoModal" tabindex="-1" role="dialog" aria-labelledby="identificacaoModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form method="POST" action="{% url 'form' slug %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title" id="cnpjModalLabel">Informe seu CNPJ</h5>
+                    <h5 class="modal-title" id="identificacaoModalLabel">
+                        {% if voucher.tipo == 'ECNPJ' %}
+                            Informe seu CNPJ
+                        {% else %}
+                            Informe seu CPF
+                        {% endif %}
+                    </h5>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="cnpj">CNPJ</label>
-                        <input type="text" class="form-control" id="cnpj" name="cnpj" placeholder="00.000.000/0000-00" required>
-                        <div id="cnpjError" class="text-danger" style="display: none;">Por favor, preencha o campo CNPJ.</div>
+                        <label for="identificacao">
+                            {% if voucher.tipo == 'ECNPJ' %}
+                                CNPJ
+                            {% else %}
+                                CPF
+                            {% endif %}
+                        </label>
+                        <input type="text" class="form-control" id="identificacao" name="identificacao" 
+                               placeholder="{% if voucher.tipo == 'ECNPJ' %}00.000.000/0000-00{% else %}000.000.000-00{% endif %}" 
+                               required>
+                        <div id="identificacaoError" class="text-danger" style="display: none;">Por favor, preencha o campo.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary" id="saveCnpj">Salvar</button>
+                    <button type="submit" class="btn btn-primary" id="saveIdentificacao">Salvar</button>
                 </div>
             </form>
         </div>
@@ -97,29 +169,48 @@ alert("{{ erro }}");
 <script>
     $(document).ready(function(){
         $('#telefone').mask('(00) 0 0000-0000');
-        $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
-
-        // Verifica se o cliente existe
-        var clienteExistente = {{ cliente_existente|yesno:"true,false" }};
-        if (!clienteExistente) {
-            // Se o cliente não existir, exibe o modal
-            $('#cnpjModal').modal({
+        {% if voucher.tipo == 'ECNPJ' %}
+            $('#identificacao').mask('00.000.000/0000-00', {reverse: true});
+            $('#cnpj').mask('00.000.000/0000-00', {reverse: true});
+        {% else %}
+            $('#identificacao').mask('000.000.000-00', {reverse: true});
+            $('#cpf').mask('000.000.000-00', {reverse: true});
+        {% endif %}
+        $('#cep').mask('00000-000');
+        
+        // Verifica se é ECNPJ e se o cliente existe/tem dados
+        var isECNPJ = {% if voucher.tipo == 'ECNPJ' %}true{% else %}false{% endif %};
+        var clienteExiste = {{ cliente|yesno:"true,false" }};
+        var clienteTemDados = {% if cliente and cliente.nome_completo %}true{% else %}false{% endif %};
+        
+        // Só exibe o modal se for ECNPJ e o cliente não existir ou não tiver dados
+        if (isECNPJ && (!clienteExiste || !clienteTemDados)) {
+            $('#identificacaoModal').modal({
                 backdrop: 'static',
                 keyboard: false
             });
         }
 
-        $('#cnpj').change(function(){
-            var cnpj = $(this).val().replace(/[^0-9]/g, ''); // Remove non-numeric characters
-            if (cnpj.length == 14) {
+        // Buscar endereço quando o CEP for preenchido
+        $('#cep').blur(function(){
+            var cep = $(this).val().replace(/\D/g, '');
+            if(cep.length == 8){
                 $.ajax({
-                    url: '{% url "get_empresa_data" %}',
+                    url: 'https://viacep.com.br/ws/'+ cep +'/json/',
                     type: 'GET',
-                    data: {cnpj: cnpj},
                     success: function(data) {
-                        $('input[name="nomeRazaoSocial"]').val(data.razao);
-                        $('input[name="nomeFantasia"]').val(data.fantasia);
-                        $('input[name="cep"]').val(data.cep);
+                        if (!("erro" in data)) {
+                            console.log(data);
+                            $('#logradouro').val(data.logradouro);
+                            $('#bairro').val(data.bairro);
+                            $('#cidade').val(data.localidade);
+                            $('#cod_ibge').val(data.ibge);
+                            $('#uf').val(data.uf);
+                            // Deixar o campo número em branco para o usuário preencher
+                            $('#numero').val('');
+                            // Foco no campo número
+                            $('#numero').focus();
+                        }
                     }
                 });
             }

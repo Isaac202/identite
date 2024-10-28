@@ -1,4 +1,3 @@
-
 {% extends "layouts/base.html" %}
 
 {% block title %}UI Tables{% endblock %}
@@ -82,6 +81,37 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Modal para Criar Vouchers -->
+<div class="modal fade" id="createVoucherModal" tabindex="-1" role="dialog" aria-labelledby="createVoucherModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createVoucherModalLabel">Criar Vouchers</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="voucher-form" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="quantity">Quantidade</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo">Tipo de Certificado</label>
+                        <select class="form-control" id="tipo" name="tipo" required>
+                            <option value="ECNPJ">e-CNPJ</option>
+                            <option value="ECPF">e-CPF</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Gerar</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -239,6 +269,31 @@ function s2ab(s) {
   return buf;
 }
 </script>
+
+<script>
+$(document).ready(function() {
+    $('#voucher-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '{% url "create_voucher" %}',
+            type: 'POST',
+            data: {
+                'quantity': $('#quantity').val(),
+                'tipo': $('#tipo').val(),
+                'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr, errmsg, err) {
+                console.log(xhr.status + ": " + xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+
 {% endblock content %}
 
 {% block javascripts %}{% endblock javascripts %}

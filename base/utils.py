@@ -24,40 +24,54 @@ API_KEY = settings.API_KEY
 def salvar_venda(cliente):
     endpoint = f'{url}/api/GarAPIs/'
     apiKey = API_KEY
-    HashVendedor=  "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
+    HashVendedor = "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     HashTabela = "b6952b6b-00ef-4f49-bc40-f139b0ac2e71"
     FormaPagamento = 11
     CodigoVoucher = cliente.voucher.code
 
     headers = {'Content-Type': 'application/json'}
+    
+    # Determinar o identificador correto (CPF ou CNPJ) e remover máscaras
+    if cliente.voucher.tipo == 'ECPF':
+        identificador = cliente.cpf.replace(".", "").replace("-", "")
+        nome = cliente.nome_completo
+        nome_fantasia = cliente.nome_completo
+        razao_social = cliente.nome_completo
+    else:  # ECNPJ
+        identificador = cliente.cnpj.replace(".", "").replace("-", "").replace("/", "")
+        nome = cliente.razao_social
+        nome_fantasia = cliente.nome_fantasia
+        razao_social = cliente.razao_social
+    print("Antes de enviar para a API")
     payload = {
         "apiKey": apiKey,
         "HashVendedor": HashVendedor,
         "HashTabela": HashTabela,
         "FormaPagamento": FormaPagamento,
         "CodigoVoucher": CodigoVoucher,
-        "Cliente":{
-            "CNPJCPF": cliente.cpf if cliente.cnpj == None else cliente.cnpj,
-            "NomeRazaoSocial": cliente.razao_social,
-            "NomeFantasia": cliente.nome_fantasia,
+        "Cliente": {
+            "CNPJCPF": identificador,
+            "NomeRazaoSocial": razao_social,
+            "NomeFantasia": nome_fantasia,
             "Email": cliente.email,
             "CEP": cliente.cep.replace("-", ""),
             "Logradouro": cliente.logradouro,
             "Numero": cliente.numero,
-            "Complemento":cliente.complemento,
+            "Complemento": cliente.complemento,
             "Bairro": cliente.bairro,
             "Cidade": cliente.cidade,
             "UF": cliente.uf,
             "CodigoIBGE": cliente.cod_ibge,
-            "DDD": cliente.telefone[0:2],
-            "Telefone": cliente.telefone[2:]
+            "DDD": cliente.telefone[0:2] if cliente.telefone else "",
+            "Telefone": cliente.telefone[2:] if cliente.telefone else ""
         },
         "Produtos": [
             {
-                "HashProduto": "e9eaa186-f11e-4a08-9f22-387c6c60e035"
+                "HashProduto": "e9eaa186-f11e-4a08-9f22-387c6c60e035" if cliente.voucher.tipo == 'ECNPJ' else "920e5543-d558-445d-b57a-8ed46023bba2"
             }
         ]
     }
+    print("payload", payload)
     response = requests.post(f"{endpoint}/Comprar", json.dumps(payload), headers=headers)
     if response.status_code == 200 and response.text.strip():
         try:
@@ -66,44 +80,63 @@ def salvar_venda(cliente):
                 erros = response_data["Erros"]
                 for erro in erros:
                     print(erro["Ocorrencia"])
-                    return None ,erro["Ocorrencia"]
+                    return None, erro["Ocorrencia"]
             else:
                 pedido = response_data["Produtos"][0]["Pedido"]
-        
                 return pedido, None
-        except json.decoder.JSONDecodeError:
-            print("JSONDecodeError: A resposta não é um JSON válido")
+        except json.JSONDecodeError:
+            return None, "Erro ao decodificar a resposta JSON"
     else:
-        print(f"Erro: A requisição retornou o status {response.status_code}")
-    return None
+        return None, f"Erro na requisição: status {response.status_code}"
 
 
 
-def gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh):
-    endpoint = f'{url}/api/GarAPIs/'  # Substitua pela URL da API que gera os protocolos
-    headers = {"Content-Type": "application/json"}
+def gerar_protocolo(pedido, cnpj_cpf, cpf, data_nascimento, is_possui_cnh):
+    endpoint = f'{url}/api/GarAPIs/'
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    
     payload = {
         "apiKey": API_KEY,
         "Pedido": pedido,
-        "CNPJ": cnpj,
         "CPF": cpf,
         "DataNascimento": data_nascimento,
         "IsPossuiCNH": is_possui_cnh
     }
-
-    response = requests.post(f'{endpoint}EmitirProtocolo', data=json.dumps(payload), headers=headers)
-    if response.status_code == 200:
-        try:
-            response_data = response.json()
-            if 'ErrorCode' in response_data:
-                erros = [erro['ErrorDescription'] for erro in response_data if 'ErrorDescription' in erro]
-                return None, erros
-            else:
-                return response_data, None
-        except json.decoder.JSONDecodeError:
-            return None, ["JSONDecodeError: A resposta não é um JSON válido"]
+    print(payload)
+    # Adiciona CNPJ ou CPF dependendo do comprimento
+    if len(cnpj_cpf) == 14:
+        payload["CNPJ"] = cnpj_cpf
     else:
-        return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+        payload["CPF"] = cnpj_cpf
+
+    try:
+        response = requests.post(
+            f'{endpoint}EmitirProtocolo', 
+            json=payload,  # Usar json em vez de data para serialização automática
+            headers=headers,
+            timeout=30  # Adicionar timeout para evitar esperas infinitas
+        )
+        
+        response.raise_for_status()  # Levanta exceção para status codes de erro
+        
+        response_data = response.json()
+        if 'ErrorCode' in response_data:
+            erros = [erro['ErrorDescription'] for erro in response_data if 'ErrorDescription' in erro]
+            return None, erros
+        
+        return response_data, None
+        
+    except requests.Timeout:
+        return None, ["Tempo limite excedido ao tentar gerar o protocolo"]
+    except requests.RequestException as e:
+        return None, [f"Erro na requisição: {str(e)}"]
+    except json.JSONDecodeError:
+        return None, ["Erro ao processar resposta do servidor"]
+    except Exception as e:
+        return None, [f"Erro inesperado: {str(e)}"]
     
 
 
@@ -114,7 +147,7 @@ def obter_disponibilidade_agenda():
     payload = {
        "apiKey": API_KEY,
         "DataInicial": "2024-06-27",
-        "DataFinal": "2024-10-29",
+        "DataFinal": "2024-11-29",
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     }
 
@@ -151,60 +184,64 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
     
-def create_client_and_order(cnpj, voucher):
-    # Obter dados da empresa pelo CNPJ
-    cnpj = cnpj.replace(".", "").replace("-", "").replace("/", "")
-    empresa_data = fetch_empresa_data(cnpj)
-
-    if not empresa_data:
-       
-        return None
+def create_client_and_order(identificacao, voucher, cep=None):
+    # Limpar a identificação (CPF ou CNPJ)
+    identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
+    print("identificacao", identificacao)
+    # Obter o objeto Voucher
+    voucher = Voucher.objects.get(code=voucher)
     
-    # Obter dados de endereço pelo CEP
-    cep = empresa_data.get('cep')
-    cep = cep.replace(".", "").replace("-", "").replace(" ", "")
-    print(cep)
-    endereco_data = get_address_data(cep)
-    print(endereco_data)    
-    if not endereco_data:
-        return None, {'error': 'Dados de endereço não encontrados'}, 404
+    # Se for e-CPF, não criar o cliente ainda
+    if voucher.tipo == 'ECPF':
+        return None, None, None
 
+    # A partir daqui, só executa se for e-CNPJ
     # Criar um novo pedido
     novo_pedido = Pedidos(
-        pedido=generate_random_code(),  # Você pode ajustar como deseja gerar o código do pedido
+        pedido=generate_random_code(),
         status='13'  # Atribuído a Voucher
     )
     novo_pedido.save()
 
-    # Preparar dados do cliente
-    nome_completo = empresa_data.get('razao') or 'N/A'
-    nome_fantasia = empresa_data.get('fantasia') or 'N/A'
-    razao_social = empresa_data.get('razao') or 'N/A'
-    logradouro = endereco_data.get('logradouro') or 'N/A'
-    complemento = endereco_data.get('complemento', '')
-    bairro = endereco_data.get('bairro') or 'N/A'
-    cidade = endereco_data.get('localidade') or 'N/A'
-    uf = endereco_data.get('uf') or 'N/A'
-    cod_ibge = endereco_data.get('ibge') or 'N/A'
-    numero = 'SN'
-    voucher = Voucher.objects.get(code=voucher)
-    # Criar um novo cliente
+    # Inicializar novo_cliente com campos básicos
     novo_cliente = DadosCliente(
-        nome_completo=nome_completo,
-        nome_fantasia=nome_fantasia,
-        razao_social=razao_social,
-        cnpj=cnpj,
-        cep=cep or '40110-100',  # Substitua por um valor padrão se necessário
-        logradouro=logradouro,
-        complemento=complemento,
-        bairro=bairro,
-        numero=numero,
-        cidade=cidade,
-        uf=uf,
-        cod_ibge=cod_ibge,  # Adicionando o código do IBGE
-        pedido=novo_pedido,  # Associar o pedido ao cliente
-        voucher=voucher
+        pedido=novo_pedido,
+        voucher=voucher,
+        # Inicializar campos obrigatórios com valores padrão
+        cep='00000000',
+        logradouro='A ser preenchido',
+        bairro='A ser preenchido',
+        cidade='A ser preenchido',
+        uf='SP',  # Valor padrão
+        cod_ibge='0000000',  # Valor padrão
+        numero='SN'
     )
+
+    # Buscar dados da empresa
+    dados = fetch_empresa_data(identificacao)
+    if dados:
+        novo_cliente.nome_completo = dados.get('razao') or 'N/A'
+        novo_cliente.nome_fantasia = dados.get('fantasia') or 'N/A'
+        novo_cliente.razao_social = dados.get('razao') or 'N/A'
+        novo_cliente.cnpj = identificacao
+        cep = cep or dados.get('cep')
+    else:
+        return None, {'error': 'Dados da empresa não encontrados'}, 404
+
+    # Se temos CEP, buscar dados de endereço
+    if cep:
+        cep = cep.replace(".", "").replace("-", "").replace(" ", "")
+        endereco_data = get_address_data(cep)
+        if endereco_data:
+            novo_cliente.cep = cep
+            novo_cliente.logradouro = endereco_data.get('logradouro') or 'A ser preenchido'
+            novo_cliente.complemento = endereco_data.get('complemento', '')
+            novo_cliente.bairro = endereco_data.get('bairro') or 'A ser preenchido'
+            novo_cliente.numero = 'SN'
+            novo_cliente.cidade = endereco_data.get('localidade') or 'A ser preenchido'
+            novo_cliente.uf = endereco_data.get('uf') or 'SP'
+            novo_cliente.cod_ibge = endereco_data.get('ibge') or '0000000'
+    
     novo_cliente.save()
     
     # Inativa o voucher
@@ -277,9 +314,12 @@ def fetch_empresa_data(cnpj):
                 'razao': data.get('razao'),
                 'fantasia': data.get('fantasia'),
                 'cep': data.get('matrizEndereco', {}).get('cep'),
-                # Adicione aqui outros campos que você deseja retornar
             }
     return None
+
+# Remover ou comentar a função fetch_pessoa_data, já que não será utilizada
+# def fetch_pessoa_data(cpf):
+#     pass
 
 def verificar_agendamento(hash_venda):
     endpoint = f'{url}/api/GarAPIs/VerificarAgendamento'
@@ -298,3 +338,8 @@ def verificar_agendamento(hash_venda):
             return None, ["JSONDecodeError: A resposta não é um JSON válido"]
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
+
+
+
+
+

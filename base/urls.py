@@ -1,6 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VoucherViewSet, DadosClienteViewSet,agendar_videoconferencia, atualizar_empresa, atualizar_status_individual_view,check_voucher, consultar_status_view, create_client_and_assign_voucher, create_voucher, delete_voucher, edit_voucher, empresa_form_view, form,agradecimento_orientacao, generate_vouchers,gerar_protocolo_view, get_empresa_data, list_vouchers,update_status_view, update_status, voucher_statistics
+from .views import (VoucherViewSet, DadosClienteViewSet, agendar_videoconferencia, 
+                    atualizar_empresa, atualizar_status_individual_view, check_voucher, 
+                    consultar_status_view, create_client_and_assign_voucher, create_voucher, 
+                    delete_voucher, edit_voucher, empresa_form_view, form, agradecimento_orientacao, 
+                    generate_vouchers, gerar_protocolo_view, get_empresa_data, list_vouchers, 
+                    update_status, voucher_statistics)
 from django.contrib.auth import views as auth_views
 
 router = DefaultRouter()
@@ -14,7 +19,6 @@ urlpatterns = [
     path('empresa-form/', empresa_form_view, name='empresa_form_view'),
     path('create-client-voucher/', create_client_and_assign_voucher, name='create_client_voucher'),
     path('api/', include(router.urls)),
-    path('update_status_view/', update_status_view, name='update_status_view'),
     path('vouchers/', list_vouchers, name='vouchers'),
     path('get_empresa_data/', get_empresa_data, name='get_empresa_data'),
     path('generate_vouchers/', generate_vouchers, name='generate_vouchers'),

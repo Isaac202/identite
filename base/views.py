@@ -31,6 +31,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db import transaction
+from django.db.utils import IntegrityError
 
 
 
@@ -121,74 +122,92 @@ def empresa_form_view(request):
 def check_voucher(request):
     if request.method == 'POST':
         code = request.POST.get('voucher_code')
-        cnpj = request.POST["cnpj"]
-  
+        
         try:
-            cliente = DadosCliente.objects.get(voucher__code=code)
-            if cliente.pedido.protocolo:
-                return render(request, 'invalid.html')
-            else:
-                return redirect('form', slug=code)
-        except DadosCliente.DoesNotExist:
-            print("Linha 31")
+            voucher = Voucher.objects.get(code=code)
             
-            cliente_get =create_client_and_order(cnpj, code)
-            if not cliente_get:
-                return redirect('atualizar_empresa', voucher=code)
-            return redirect('form', slug=code)  # Redireciona para o formulário com o código do voucher
-        except DadosCliente.MultipleObjectsReturned:
-            return render(request, 'invalid.html')
+            if not voucher.is_valid:
+                return render(request, 'invalid.html', {'message': 'Este voucher já foi utilizado.'})
+            
+            # Redirecionar para o formulário genérico
+            return redirect('form', slug=code)
+        
+        except Voucher.DoesNotExist:
+            return render(request, 'invalid.html', {'message': 'Voucher inválido.'})
+    
     return render(request, 'check_voucher.html')
 
-def form(request, slug=None):
+def form(request, slug):
     if slug is None:
         raise Http404("Página não encontrada.")
-    else:
-        try:
-            voucher = Voucher.objects.get(code=slug)
-            cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-            if cliente:
-                cliente_existente = True
-                nome_completo = cliente.nome_fantasia if cliente.nome_fantasia != "N/A" else cliente.razao_social.split(" ")[0] 
-            else:
-                nome_completo = None
-                cliente_existente = False
-        except Voucher.DoesNotExist:
-            return render(request, 'invalid.html', {'code': slug})
-
-    if request.method == 'POST':
-        if "cnpj" in request.POST and request.POST["cnpj"].strip():
-            cnpj = request.POST["cnpj"]
-            cliente_get =create_client_and_order(cnpj, slug)
-            if not cliente_get:
-                return redirect('atualizar_empresa', voucher=slug)
-            return redirect(request.path)
-        
-        cliente = DadosCliente.objects.filter(voucher__code=slug).first()
-        
-        if request.POST["nomeCompleto"].strip():
-            cliente.nome_completo = request.POST["nomeCompleto"]
-        if request.POST["email"].strip():
-            cliente.email = request.POST["email"]
-        if request.POST["telefone"].strip():
-            telefone = request.POST["telefone"].replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
-            cliente.telefone = telefone
-        
-        # Adicione esta parte para salvar a informação sobre CNH
-        possui_cnh = request.POST.get("possui_cnh")
-        if possui_cnh:
-            cliente.possui_cnh = possui_cnh == "sim"
     
+    voucher = get_object_or_404(Voucher, code=slug)
+    cliente = DadosCliente.objects.filter(voucher=voucher).first()
+    
+    if request.method == 'POST':
+        # Se for e-CNPJ e tiver identificação, usar create_client_and_order
+        if voucher.tipo == 'ECNPJ' and request.POST.get("identificacao"):
+            identificacao = request.POST.get("identificacao")
+            cliente, error, _ = create_client_and_order(identificacao, slug)
+            if error:
+                return render(request, 'form.html', {'erro': error, 'slug': slug, 'voucher': voucher})
+            return redirect('form', slug=slug)
+
+        # Para e-CPF ou atualização de dados existentes
+        if not cliente:
+            # Criar um novo pedido primeiro
+            novo_pedido = Pedidos.objects.create(
+                pedido=generate_random_code(),
+                status='13'  # Atribuído a Voucher
+            )
+            
+            # Criar o cliente com o pedido
+            cliente = DadosCliente(
+                voucher=voucher,
+                pedido=novo_pedido
+            )
+        
+        # Atualizar dados do cliente
+        if voucher.tipo == 'ECNPJ':
+            cliente.nome_fantasia = request.POST.get("nomeFantasia")
+            cliente.razao_social = request.POST.get("razaoSocial")
+            cliente.cnpj = request.POST.get("cnpj", "").replace(".", "").replace("-", "").replace("/", "")
+        else:  # ECPF
+            cliente.nome_completo = request.POST.get("nomeCompleto")
+            cliente.cpf = request.POST.get("cpf", "").replace(".", "").replace("-", "")
+            # Campos específicos para e-CPF
+            cliente.cep = request.POST.get("cep", "").replace("-", "")
+            cliente.logradouro = request.POST.get("logradouro")
+            cliente.numero = request.POST.get("numero")
+            cliente.complemento = request.POST.get("complemento")
+            cliente.bairro = request.POST.get("bairro")
+            cliente.cidade = request.POST.get("cidade")
+            cliente.uf = request.POST.get("uf")
+            cliente.cod_ibge = request.POST.get("cod_ibge")
+        
+        # Dados comuns para ambos os tipos
+        cliente.email = request.POST.get("email")
+        telefone = request.POST.get("telefone")
+        if telefone:
+            cliente.telefone = telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
+        cliente.possui_cnh = request.POST.get("possui_cnh") == "sim"
+        
+        try:
+            cliente.save()
+        except IntegrityError as e:
+            return render(request, 'form.html', {'erro': str(e), 'slug': slug, 'cliente': cliente, 'voucher': voucher})
+        
         pedido, erro = salvar_venda(cliente)
         if pedido is not None:
             cliente.pedido.pedido = pedido
             cliente.pedido.save()
-            cliente.save()    
-            Voucher.objects.filter(code=slug).update(is_valid=False)
+            voucher.is_valid = False
+            voucher.save()
             return redirect('gerar_protocolo', pedido=pedido)
         else:
-            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'cliente_existente': cliente_existente})
-    return render(request, 'form.html', {'slug': slug, 'cliente': cliente, 'nome_completo': nome_completo, 'cliente_existente': cliente_existente})
+            return render(request, 'form.html', {'erro': erro, 'slug': slug, 'cliente': cliente, 'voucher': voucher})
+    
+    return render(request, 'form.html', {'slug': slug, 'cliente': cliente, 'voucher': voucher})
 
 
 def agendar_videoconferencia(request, pedido=None):
@@ -250,42 +269,83 @@ def get_key_by_value(dictionary, value):
             return key
         
 def gerar_protocolo_view(request, pedido=None):
+    # Verificar se o protocolo já foi gerado
+    status, error = consultar_status_pedido(pedido)
+    if not error and status and status.get("StatusPedido") == 'Protocolo Gerado':
+        return redirect('agendar_videoconferencia', pedido=pedido)
     try:
-        dados_cliente = DadosCliente.objects.get(pedido__pedido=pedido)
+        dados_cliente = DadosCliente.objects.select_related('voucher', 'pedido').get(pedido__pedido=pedido)
+            
     except DadosCliente.DoesNotExist:
         return render(request, 'protocolo.html', {'pedido': pedido, 'erro': 'Cliente não encontrado'})
 
     if request.method == 'POST':
-        cnpj = request.POST.get('cnpj').replace(".", "").replace("/", "").replace("-", "")
-        cpf = request.POST.get('cpf').replace(".", "").replace("-", "")
-        data_nascimento = datetime.strptime(request.POST.get('data_nascimento'), '%d/%m/%Y').strftime('%Y-%m-%d')
-        
-        is_possui_cnh = dados_cliente.possui_cnh
-        print("is_possui_cnh", is_possui_cnh)
-        erros, protocolo = gerar_protocolo(pedido, cnpj, cpf, data_nascimento, is_possui_cnh)
-        
-        dados_cliente.cnpj = cnpj
-        dados_cliente.cpf = cpf
-        dados_cliente.data_nacimento = data_nascimento
-        dados_cliente.possui_cnh = is_possui_cnh
-        dados_cliente.save()
-        
-        if any('Protocolo emitido com sucesso' in erro['ErrorDescription'] for erro in erros):
-            status, error = consultar_status_pedido(dados_cliente.pedido.pedido)
-            status_dict = dict(Pedidos.STATUS_CHOICES)
-            status_key = get_key_by_value(status_dict, status["StatusPedido"])
-            dados_cliente.pedido.status = status_key
-            dados_cliente.pedido.save()
-            return redirect('agendar_videoconferencia', pedido=pedido)
-        
-        if erros:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
-        
-        if protocolo is not None:
-            return redirect('agendar_videoconferencia', pedido=pedido)
-        else:
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erros': erros, 'dados_cliente': dados_cliente})
+        try:
+            # Limpar e preparar os dados uma única vez
+            cnpj_cpf = (dados_cliente.cnpj if dados_cliente.voucher.tipo == 'ECNPJ' else dados_cliente.cpf).replace(".", "").replace("-", "").replace("/", "")
+            cpf = request.POST.get('cpf', '').replace(".", "").replace("-", "")
+            
+            try:
+                data_nascimento = datetime.strptime(request.POST.get('data_nascimento', ''), '%d/%m/%Y').strftime('%Y-%m-%d')
+            except ValueError:
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'dados_cliente': dados_cliente,
+                    'erro': 'Data de nascimento inválida'
+                })
 
+            # Validações básicas antes de fazer a requisição
+            if not cpf or not data_nascimento:
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'dados_cliente': dados_cliente,
+                    'erro': 'Todos os campos são obrigatórios'
+                })
+
+            # Fazer a requisição para gerar o protocolo
+            erros, protocolo = gerar_protocolo(pedido, cnpj_cpf, cpf, data_nascimento, dados_cliente.possui_cnh)
+            
+            if erros:
+                # Verificar se o erro indica que o protocolo já foi gerado
+                for erro in erros:
+                    if isinstance(erro, dict):
+                        erro_desc = erro.get('ErrorDescription', '').lower()
+                    else:
+                        erro_desc = str(erro).lower()
+                        
+                    if "protocolo já foi gerado" in erro_desc:
+                        return redirect('agendar_videoconferencia', pedido=pedido)
+                
+                return render(request, 'protocolo.html', {
+                    'pedido': pedido, 
+                    'erros': erros, 
+                    'dados_cliente': dados_cliente
+                })
+            
+            if protocolo:
+                # Atualizar status do pedido
+                status, error = consultar_status_pedido(dados_cliente.pedido.pedido)
+                if not error and status:
+                    status_dict = dict(Pedidos.STATUS_CHOICES)
+                    status_key = get_key_by_value(status_dict, status["StatusPedido"])
+                    dados_cliente.pedido.status = status_key
+                    dados_cliente.pedido.save()
+                
+                return redirect('agendar_videoconferencia', pedido=pedido)
+            
+            return render(request, 'protocolo.html', {
+                'pedido': pedido, 
+                'erro': 'Erro ao gerar protocolo', 
+                'dados_cliente': dados_cliente
+            })
+
+        except Exception as e:
+            return render(request, 'protocolo.html', {
+                'pedido': pedido, 
+                'erro': f'Erro inesperado: {str(e)}', 
+                'dados_cliente': dados_cliente
+            })
+    
     return render(request, 'protocolo.html', {'pedido': pedido, 'dados_cliente': dados_cliente})
 
 
@@ -298,87 +358,34 @@ def list_vouchers(request):
 
 
 @login_required
-def create_voucher(request):
-    if request.method == "POST":
-        form = VoucherForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('list_vouchers')
-    else:
-        form = VoucherForm()
-    return render(request, 'home/create_voucher.html', {'form': form})
-
-def update_status_view(request):
-    filter_params = request.GET.dict()
-    queryset = DadosCliente.objects.all()
-
-    if 'start_date' in filter_params and filter_params['start_date']:
-        queryset = queryset.filter(created_at__gte=filter_params['start_date'])
-    if 'end_date' in filter_params and filter_params['end_date']:
-        queryset = queryset.filter(created_at__lte=filter_params['end_date'])
-    if 'status' in filter_params and filter_params['status']:
-        queryset = queryset.filter(pedido__status=filter_params['status'])
-    if 'nome_completo' in filter_params and filter_params['nome_completo']:
-        queryset = queryset.filter(nome_completo__icontains=filter_params['nome_completo'])
-    if 'cnpj' in filter_params and filter_params['cnpj']:
-        queryset = queryset.filter(cnpj__icontains=filter_params['cnpj'])
-    if 'voucher_code' in filter_params and filter_params['voucher_code']:
-        queryset = queryset.filter(voucher__code__icontains=filter_params['voucher_code'])
-
-    # Filtra apenas clientes com status '5' (assumindo que '5' é o status que precisa ser atualizado)
-    queryset = queryset.filter(pedido__status='5')
-
-    clientes = queryset[:100]  # Limita a 100 clientes
-    cliente_ids = list(clientes.values_list('id', flat=True))
-
-    update_status_celery.delay(cliente_ids)
-
-    return JsonResponse({'success': True, 'message': f'Atualizando {len(cliente_ids)} clientes.'})
-
-
-@login_required
-def voucher_statistics(request):
-    # Aplicar filtros
-    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher', 'pedido').order_by('-created_at'))
-    clients_with_vouchers = dados_cliente_filter.qs
-
-    # Calcular estatísticas com base nos filtros aplicados
-    total_clients = clients_with_vouchers.distinct().count()
-    
-    # Obter vouchers únicos dos clientes filtrados
-    filtered_vouchers = Voucher.objects.filter(dadoscliente__in=clients_with_vouchers).distinct()
-    
-    active_vouchers = filtered_vouchers.filter(is_valid=True).count()
-    inactive_vouchers = filtered_vouchers.filter(is_valid=False).count()
-
-    # Adicionar paginação
-    paginator = Paginator(clients_with_vouchers, 10)  # 10 itens por página
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'filter': dados_cliente_filter,
-        'total_clients': total_clients,
-        'active_vouchers': active_vouchers,
-        'inactive_vouchers': inactive_vouchers,
-        'clients_with_vouchers': page_obj,
-        'page_obj': page_obj,
-    }
-
-    return render(request, 'home/index.html', context)
-
-
-@login_required
 @csrf_exempt
 def create_voucher(request):
     if request.method == "POST":
         quantity = int(request.POST.get('quantity', 1))
+        tipo = request.POST.get('tipo', 'ECNPJ')  # Default para e-CNPJ se não especificado
+        
+        # Criar um novo lote
+        lote = Lote.objects.create()
         vouchers = []
+        
         for _ in range(quantity):
             code = generate_random_code()
-            voucher = Voucher.objects.create(code=code)
+            voucher = Voucher.objects.create(
+                code=code,
+                lote=lote,
+                tipo=tipo
+            )
             vouchers.append(voucher)
-        return JsonResponse({'vouchers': [model_to_dict(v) for v in vouchers]}, status=201)
+            
+        return JsonResponse({
+            'vouchers': [{
+                'id': v.id,
+                'code': v.code,
+                'tipo': v.get_tipo_display(),
+                'is_valid': v.is_valid
+            } for v in vouchers]
+        }, status=201)
+    
     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 @login_required
@@ -437,16 +444,51 @@ def create_client_and_assign_voucher(request):
     data = json.loads(request.body)
     if data['APIKEY'] != API_KEY:
         return JsonResponse({'error': 'Invalid API Key'}, status=403)
-    cnpj = data['cnpj'].replace(".", "").replace("-", "").replace("/", "")
-    voucher = Voucher.objects.filter(is_valid=True).first()
+    
+    # Pegar o valor do CNPJ/CPF do payload
+    identificacao = data.get('CNPJ')
+    if not identificacao:
+        return JsonResponse({'error': 'CNPJ/CPF não fornecido'}, status=400)
+    
+    # Limpar a identificação de qualquer formatação
+    identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
+    
+    # Determinar o tipo baseado no comprimento do número
+    tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
+    
+    # Buscar voucher disponível do tipo correto
+    voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+    
+    # Se não houver voucher disponível, gerar novos
     if not voucher:
-        return JsonResponse({'error': 'Nenhum voucher disponível'}, status=404)
-    voucher.is_valid = False
+        # Criar um novo lote
+        lote = Lote.objects.create()
+        
+        # Gerar 1000 novos vouchers do tipo necessário
+        for _ in range(1000):
+            code = generate_random_code()
+            Voucher.objects.create(
+                code=code,
+                lote=lote,
+                tipo=tipo_voucher
+            )
+        
+        # Tentar obter um voucher novamente
+        voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+        
+        if not voucher:
+            return JsonResponse({
+                'error': f'Erro ao gerar novos vouchers do tipo {tipo_voucher}',
+                'tipo_solicitado': tipo_voucher
+            }, status=500)
+    
+    # Inativar o voucher
     voucher.save()
-    print(voucher.is_valid)
+    
     return JsonResponse({
         'id': voucher.id,
         'code': voucher.code,
+        'tipo': voucher.get_tipo_display(),
         'is_valid': voucher.is_valid,
     }, status=200)
 
@@ -467,7 +509,7 @@ def atualizar_empresa(request, voucher):
         # Validação básica dos dados
         errors = []
         if not cnpj or not cep:
-            errors.append('Campos obrigatórios não preenchidos.')
+            errors.append('Campos obrigatrios não preenchidos.')
         if len(cnpj) != 14:
             errors.append('CNPJ inválido.')
         if len(cep) != 8 or not cep.isdigit():
@@ -595,5 +637,66 @@ def atualizar_status_individual_view(request, cliente_id):
         })
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+
+@login_required
+def voucher_statistics(request):
+    # Aplicar filtros
+    dados_cliente_filter = DadosClienteFilter(request.GET, queryset=DadosCliente.objects.filter(voucher__isnull=False).select_related('voucher', 'pedido').order_by('-created_at'))
+    clients_with_vouchers = dados_cliente_filter.qs
+
+    # Calcular estatísticas com base nos filtros aplicados
+    total_clients = clients_with_vouchers.distinct().count()
+    
+    # Obter vouchers únicos dos clientes filtrados
+    filtered_vouchers = Voucher.objects.filter(dadoscliente__in=clients_with_vouchers).distinct()
+    
+    # Contar vouchers por tipo
+    active_vouchers_ecnpj = filtered_vouchers.filter(is_valid=True, tipo='ECNPJ').count()
+    active_vouchers_ecpf = filtered_vouchers.filter(is_valid=True, tipo='ECPF').count()
+    inactive_vouchers_ecnpj = filtered_vouchers.filter(is_valid=False, tipo='ECNPJ').count()
+    inactive_vouchers_ecpf = filtered_vouchers.filter(is_valid=False, tipo='ECPF').count()
+
+    # Adicionar paginação
+    paginator = Paginator(clients_with_vouchers, 10)  # 10 itens por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'filter': dados_cliente_filter,
+        'total_clients': total_clients,
+        'active_vouchers_ecnpj': active_vouchers_ecnpj,
+        'active_vouchers_ecpf': active_vouchers_ecpf,
+        'inactive_vouchers_ecnpj': inactive_vouchers_ecnpj,
+        'inactive_vouchers_ecpf': inactive_vouchers_ecpf,
+        'clients_with_vouchers': page_obj,
+        'page_obj': page_obj,
+    }
+
+    return render(request, 'home/index.html', context)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
