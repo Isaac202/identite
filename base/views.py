@@ -449,23 +449,25 @@ def create_client_and_assign_voucher(request):
     cnpj = data.get('CNPJ')
     cpf = data.get('CPF')
     
-    # Verificar qual campo foi fornecido
-    if cnpj:
-        identificacao = cnpj
-    elif cpf:
-        identificacao = cpf
+    # Se nenhum campo foi fornecido, assume que é CNPJ
+    if not cpf and not cnpj:
+        tipo_voucher = 'ECNPJ'
     else:
-        return JsonResponse({'error': 'CNPJ ou CPF não fornecido'}, status=400)
-    
-    # Limpar a identificação de qualquer formatação
-    identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
-    
-    # Validar o comprimento da identificação
-    if len(identificacao) not in [11, 14]:
-        return JsonResponse({'error': 'Número de documento inválido'}, status=400)
-    
-    # Determinar o tipo baseado no comprimento do número
-    tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
+        # Se algum campo foi fornecido, usa a lógica normal
+        if cpf:
+            identificacao = cpf
+        else:
+            identificacao = cnpj
+            
+        # Limpar a identificação de qualquer formatação
+        identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
+        
+        # Validar o comprimento da identificação
+        if len(identificacao) not in [11, 14]:
+            return JsonResponse({'error': 'Número de documento inválido'}, status=400)
+        
+        # Determinar o tipo baseado no comprimento do número
+        tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
     
     # Buscar voucher disponível do tipo correto
     voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
@@ -685,6 +687,8 @@ def voucher_statistics(request):
     }
 
     return render(request, 'home/index.html', context)
+
+
 
 
 
