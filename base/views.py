@@ -445,13 +445,24 @@ def create_client_and_assign_voucher(request):
     if data['APIKEY'] != API_KEY:
         return JsonResponse({'error': 'Invalid API Key'}, status=403)
     
-    # Pegar o valor do CNPJ/CPF do payload
-    identificacao = data.get('CNPJ')
-    if not identificacao:
-        return JsonResponse({'error': 'CNPJ/CPF não fornecido'}, status=400)
+    # Tentar pegar tanto CNPJ quanto CPF do payload
+    cnpj = data.get('CNPJ')
+    cpf = data.get('CPF')
+    
+    # Verificar qual campo foi fornecido
+    if cnpj:
+        identificacao = cnpj
+    elif cpf:
+        identificacao = cpf
+    else:
+        return JsonResponse({'error': 'CNPJ ou CPF não fornecido'}, status=400)
     
     # Limpar a identificação de qualquer formatação
     identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
+    
+    # Validar o comprimento da identificação
+    if len(identificacao) not in [11, 14]:
+        return JsonResponse({'error': 'Número de documento inválido'}, status=400)
     
     # Determinar o tipo baseado no comprimento do número
     tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
@@ -483,6 +494,7 @@ def create_client_and_assign_voucher(request):
             }, status=500)
     
     # Inativar o voucher
+    voucher.is_valid = False
     voucher.save()
     
     return JsonResponse({
@@ -673,6 +685,7 @@ def voucher_statistics(request):
     }
 
     return render(request, 'home/index.html', context)
+
 
 
 
