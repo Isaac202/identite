@@ -352,7 +352,7 @@ def gerar_protocolo_view(request, pedido=None):
 
 @login_required
 def list_vouchers(request):
-    voucher_list = Voucher.objects.filter(is_valid=True)[:50]
+    voucher_list = Voucher.objects.filter(is_valid=True)
     voucher_filter = VoucherFilter(request.GET, queryset=voucher_list)
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
