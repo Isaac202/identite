@@ -450,29 +450,25 @@ def create_client_and_assign_voucher(request):
     if data['APIKEY'] != API_KEY:
         return JsonResponse({'error': 'Invalid API Key'}, status=403)
     
-    # Tentar pegar tanto CNPJ quanto CPF do payload
-    cnpj = data.get('CNPJ')
-    cpf = data.get('CPF')
-    print(data)
-    # Se nenhum campo foi fornecido, assume que é CNPJ
-    if not cpf and not cnpj:
-        tipo_voucher = 'ECNPJ'
+    # Verificar se temos CPF ou CNPJ no payload
+    cnpj = data.get('cnpj', '').strip()
+    cpf = data.get('cpf', '').strip()
+    
+    # Determinar o tipo baseado em qual campo está preenchido
+    if cpf:
+        identificacao = cpf
+        tipo_voucher = 'ECPF'
+        print("CPF")
     else:
-        # Se algum campo foi fornecido, usa a lógica normal
-        if cpf:
-            identificacao = cpf
-        else:
-            identificacao = cnpj
-            
-        # Limpar a identificação de qualquer formatação
-        identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
-        
-        # Validar o comprimento da identificação
-        if len(identificacao) not in [11, 14]:
-            return JsonResponse({'error': 'Número de documento inválido'}, status=400)
-        
-        # Determinar o tipo baseado no comprimento do número
-        tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
+        identificacao = cnpj
+        tipo_voucher = 'ECNPJ'
+    
+    # Limpar a identificação de qualquer formatação
+    identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
+    
+    # Validar o comprimento da identificação
+    if len(identificacao) not in [11, 14]:
+        return JsonResponse({'error': 'Número de documento inválido'}, status=400)
     
     # Buscar voucher disponível do tipo correto e não entregue
     voucher = Voucher.objects.filter(
@@ -518,6 +514,7 @@ def create_client_and_assign_voucher(request):
         'code': voucher.code,
         'tipo': voucher.get_tipo_display(),
         'is_valid': voucher.is_valid,
+        'entregue': voucher.entregue
     }, status=200)
 
 
