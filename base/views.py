@@ -474,14 +474,19 @@ def create_client_and_assign_voucher(request):
         # Determinar o tipo baseado no comprimento do número
         tipo_voucher = 'ECNPJ' if len(identificacao) == 14 else 'ECPF'
     
-    # Buscar voucher disponível do tipo correto
-    voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+    # Buscar voucher disponível do tipo correto e não entregue
+    voucher = Voucher.objects.filter(
+        is_valid=True, 
+        tipo=tipo_voucher,
+        entregue=False
+    ).first()
     
     # Se não houver voucher disponível, gerar novos
     if not voucher:
         # Criar um novo lote
         lote = Lote.objects.create()
         
+        # Gerar 25 vouchers de cada tipo
         # Gerar 1000 novos vouchers do tipo necessário
         for _ in range(1000):
             code = generate_random_code()
@@ -492,7 +497,11 @@ def create_client_and_assign_voucher(request):
             )
         
         # Tentar obter um voucher novamente
-        voucher = Voucher.objects.filter(is_valid=True, tipo=tipo_voucher).first()
+        voucher = Voucher.objects.filter(
+            is_valid=True, 
+            tipo=tipo_voucher,
+            entregue=False
+        ).first()
         
         if not voucher:
             return JsonResponse({
@@ -500,7 +509,8 @@ def create_client_and_assign_voucher(request):
                 'tipo_solicitado': tipo_voucher
             }, status=500)
     
-    
+    # Marcar voucher como entregue e inválido
+    voucher.entregue = True
     voucher.save()
     
     return JsonResponse({

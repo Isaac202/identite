@@ -36,6 +36,7 @@ class Voucher(BaseModel):
     lote = models.ForeignKey(Lote, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
     tipo = models.CharField(max_length=5, choices=TIPO_CHOICES, default='ECNPJ')
+    entregue = models.BooleanField(default=False)  # Novo campo
 
     def __str__(self):
         return f"{self.code} ({self.get_tipo_display()})"
