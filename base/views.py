@@ -453,7 +453,7 @@ def create_client_and_assign_voucher(request):
     # Tentar pegar tanto CNPJ quanto CPF do payload
     cnpj = data.get('CNPJ')
     cpf = data.get('CPF')
-    
+    print(data)
     # Se nenhum campo foi fornecido, assume que é CNPJ
     if not cpf and not cnpj:
         tipo_voucher = 'ECNPJ'
