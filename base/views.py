@@ -271,7 +271,9 @@ def get_key_by_value(dictionary, value):
 def gerar_protocolo_view(request, pedido=None):
     # Verificar se o protocolo já foi gerado
     status, error = consultar_status_pedido(pedido)
-    if not error and status and status.get("StatusPedido") == 'Protocolo Gerado':
+    # Adicionar ambas as possíveis strings de status
+    status_success = ['Protocolo Gerado', 'Protocolo emitido com sucesso']
+    if not error and status and status.get("StatusPedido") in status_success:
         return redirect('agendar_videoconferencia', pedido=pedido)
     try:
         dados_cliente = DadosCliente.objects.select_related('voucher', 'pedido').get(pedido__pedido=pedido)
@@ -313,7 +315,8 @@ def gerar_protocolo_view(request, pedido=None):
                     else:
                         erro_desc = str(erro).lower()
                         
-                    if "protocolo já foi gerado" in erro_desc:
+                    # Adicionar ambas as possíveis strings de erro
+                    if any(status in erro_desc for status in ["protocolo já foi gerado", "protocolo emitido com sucesso"]):
                         return redirect('agendar_videoconferencia', pedido=pedido)
                 
                 return render(request, 'protocolo.html', {
