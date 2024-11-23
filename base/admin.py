@@ -5,49 +5,70 @@ import openpyxl
 from django.utils import timezone
 from django.http import HttpResponse
 
-admin.site.register(Pedidos)
+class SoftDeleteAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        # Retorna apenas objetos ativos por padrão
+        return self.model.objects.filter(is_active=True)
+
+    actions = ['soft_delete_selected', 'restore_selected']
+
+    def soft_delete_selected(self, request, queryset):
+        for obj in queryset:
+            obj.soft_delete()
+        self.message_user(request, f"{queryset.count()} itens foram marcados como deletados.")
+    soft_delete_selected.short_description = "Deletar itens selecionados (soft delete)"
+
+    def restore_selected(self, request, queryset):
+        for obj in queryset:
+            obj.restore()
+        self.message_user(request, f"{queryset.count()} itens foram restaurados.")
+    restore_selected.short_description = "Restaurar itens selecionados"
+
+@admin.register(Pedidos)
+class PedidosAdmin(SoftDeleteAdmin):
+    list_display = ('pedido', 'protocolo', 'status', 'created_at', 'is_active')
+    list_filter = ('status', 'is_active')
+    search_fields = ('pedido', 'protocolo')
 
 @admin.register(Voucher)
-class VoucherAdmin(admin.ModelAdmin):
-    list_display = ('code', 'tipo', 'is_valid', 'lote', 'created_at')
-    list_filter = ('tipo', 'is_valid', 'created_at')
+class VoucherAdmin(SoftDeleteAdmin):
+    list_display = ('code', 'tipo', 'is_valid', 'lote', 'created_at', 'is_active')
+    list_filter = ('tipo', 'is_valid', 'created_at', 'is_active')
     search_fields = ('code',)
     ordering = ('-created_at',)
 
-
-class DadosClienteAdmin(admin.ModelAdmin):
-    list_display = ['nome_completo', 'get_pedido', 'get_protocolo', 'get_status', 'voucher', 'cpf', 'cnpj', 'created_at', 'updated_at']
-    search_fields = ['nome_completo', 'razao_social','pedido__pedido', 'cpf', 'cnpj', 'voucher__code']
-    list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), ('updated_at', admin.DateFieldListFilter)]
-    actions = ['exportar_dados_para_excel']
+class DadosClienteAdmin(SoftDeleteAdmin):
+    list_display = ['nome_completo', 'get_pedido', 'get_protocolo', 'get_status', 
+                   'voucher', 'cpf', 'cnpj', 'created_at', 'updated_at', 'is_active']
+    search_fields = ['nome_completo', 'razao_social', 'pedido__pedido', 'cpf', 'cnpj', 'voucher__code']
+    list_filter = ['pedido__status', ('created_at', admin.DateFieldListFilter), 
+                  ('updated_at', admin.DateFieldListFilter), 'is_active']
+    actions = ['exportar_dados_para_excel', 'soft_delete_selected', 'restore_selected']
 
     def get_pedido(self, obj):
-        return obj.pedido.pedido
+        return obj.pedido.pedido if obj.pedido else None
 
     def get_status(self, obj):
-        return obj.pedido.get_status_display()
+        return obj.pedido.get_status_display() if obj.pedido else None
 
     def get_protocolo(self, obj):
-        return obj.pedido.protocolo
+        return obj.pedido.protocolo if obj.pedido else None
     
     get_protocolo.short_description = 'Protocolo'
-    get_pedido.short_description = 'Pedido'  # Define um título para a coluna
-    get_status.short_description = 'Status'  # Define um título para a coluna
+    get_pedido.short_description = 'Pedido'
+    get_status.short_description = 'Status'
 
     def exportar_dados_para_excel(self, request, queryset):
-        # Criar um workbook e uma planilha
         workbook = openpyxl.Workbook()
         sheet = workbook.active
         sheet.title = 'Dados Clientes'
-        # Cabeçalhos
-        headers = ['Nome', 'CNPJ', 'razao_social','Voucher', 'Data de Atualização']
+        
+        headers = ['Nome', 'CNPJ', 'razao_social', 'Voucher', 'Data de Atualização', 'Status']
         sheet.append(headers)
 
-        # Adicionar os dados dos clientes selecionados
         for cliente in queryset:
-            # Remover o fuso horário de updated_at, se necessário
             updated_at = cliente.updated_at
-            if updated_at.tzinfo is not None:
+            if updated_at and updated_at.tzinfo is not None:
                 updated_at = updated_at.replace(tzinfo=None)
 
             sheet.append([
@@ -55,32 +76,18 @@ class DadosClienteAdmin(admin.ModelAdmin):
                 cliente.cnpj,
                 cliente.razao_social,
                 cliente.voucher.code if cliente.voucher else '',
-                updated_at.strftime('%Y-%m-%d %H:%M:%S') if updated_at else ''
+                updated_at.strftime('%Y-%m-%d %H:%M:%S') if updated_at else '',
+                self.get_status(cliente) or ''
             ])
 
-        # Criar um objeto HttpResponse com o conteúdo do arquivo Excel
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
         response['Content-Disposition'] = 'attachment; filename="dados_clientes.xlsx"'
-        
-        workbook.save(response)  # Salvar o workbook na resposta
+        workbook.save(response)
         return response
 
     exportar_dados_para_excel.short_description = 'Exportar dados para Excel'
 
-    def changelist_view(self, request, extra_context=None):
-        # Obtenha a contagem total de clientes
-        total_clientes = DadosCliente.objects.count()
-
-        # Obtenha a contagem de clientes por status do pedido
-        clientes_por_status = DadosCliente.objects.values('pedido__status').annotate(total=Count('id'))
-
-        # Adicione as estatísticas ao contexto
-        extra_context = extra_context or {}
-        extra_context['total_clientes'] = total_clientes
-        extra_context['clientes_por_status'] = clientes_por_status
-
-        return super(DadosClienteAdmin, self).changelist_view(request, extra_context=extra_context)
-
-# Registrar o modelo e a classe do admin
 admin.site.register(DadosCliente, DadosClienteAdmin)
 

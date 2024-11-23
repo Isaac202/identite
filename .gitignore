@@ -11,3 +11,5 @@ teste.py
 *.pem
 *.pen
 *.json
+teste.py
+*teste.py

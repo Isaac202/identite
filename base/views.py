@@ -279,7 +279,7 @@ def gerar_protocolo_view(request, pedido=None):
         dados_cliente = DadosCliente.objects.select_related('voucher', 'pedido').get(pedido__pedido=pedido)
             
     except DadosCliente.DoesNotExist:
-        return render(request, 'protocolo.html', {'pedido': pedido, 'erro': 'Cliente não encontrado'})
+        return render(request, 'protocolo.html', {'pedido': pedido, 'erro': 'Cliente no encontrado'})
 
     if request.method == 'POST':
         try:
@@ -595,76 +595,167 @@ def handler500(request, *args, **argv):
 
 def consultar_status_view(request, cliente_id):
     try:
+       
         with transaction.atomic():
             cliente = DadosCliente.objects.select_for_update().get(id=cliente_id)
-            status_data, error = consultar_status_pedido(cliente.pedido.pedido)
+            cliente_documento = cliente.cnpj or cliente.cpf  # Usar o número do pedido ao invés do documento
+            response_data, error = consultar_status_pedido(cliente_documento)
             if error:
                 return JsonResponse({'success': False, 'error': error})
             
-            status_dict = dict(Pedidos.STATUS_CHOICES)
-            status_key = get_key_by_value(status_dict, status_data["StatusPedido"])
+            # Mapeamento dos status da API para os status do modelo
+            status_mapping = {
+                'Não Confirmada': '1',
+                'Solicitação de Estorno': '2',
+                'Estornada': '3',
+                'Emissão liberada': '4',
+                'Protocolo Gerado': '5',
+                'Emitida': '6',
+                'Revogada': '7',
+                'Em Verificação': '8',
+                'Em Validação': '9',
+                'Recusada': '10',
+                'Cancelada': '11',
+                'Atribuído a Voucher': '12'
+            }
             
-            # Atualiza o status do pedido
-            if cliente.pedido.status != status_key:
-                cliente.pedido.status = status_key
-                cliente.pedido.save()
+        if error:
+            print(f"Erro ao consultar cliente {cliente_documento}: {error}")
             
-            # Atualiza o protocolo se disponível
-            if status_data.get("Protocolo") and cliente.pedido.protocolo != status_data["Protocolo"]:
-                cliente.pedido.protocolo = status_data["Protocolo"]
-                cliente.pedido.save()
             
-            # Atualiza o hashVenda se disponível
-            if status_data.get("HashVenda") and cliente.pedido.hashVenda != status_data["HashVenda"]:
-                cliente.pedido.hashVenda = status_data["HashVenda"]
-                cliente.pedido.save()
+        if not response_data or not response_data.get("PossuiPedidosVinculados"):
+            print(f"Sem pedidos vinculados para o cliente {cliente_documento}")
+           
 
-            # Atualiza ou cria o agendamento
-            if status_data.get("DataHoraAgenda"):
-                data_hora = datetime.strptime(status_data["DataHoraAgenda"], "%d/%m/%Y %H:%M:%S")
-                agendamento, created = Agendamento.objects.update_or_create(
-                    pedido=cliente.pedido,
-                    defaults={
-                        'data': data_hora.strftime("%Y-%m-%d"),
-                        'hora': data_hora.strftime("%H:%M:%S")
-                    }
+        pedidos = response_data.get("Pedidos", [])
+        if not pedidos:
+            print(f"Lista de pedidos vazia para o cliente {cliente_documento}")
+            
+        # Primeiro tenta encontrar um pedido emitido
+        pedido_atualizar = response_data.get("Pedidos", [])
+        
+        # Se não encontrar pedido emitido, pega o mais recente por data
+        if not pedido_atualizar:
+            try:
+                pedido_atualizar = max(
+                    pedidos,
+                    key=lambda x: datetime.strptime(x.get("DataVenda", "2000-01-01T00:00:00.000"), "%Y-%m-%dT%H:%M:%S.%f")
                 )
-
+            except (ValueError, TypeError) as e:
+                print(f"Erro ao processar data do pedido para cliente {cliente_documento}: {e}")
+                
+       
+        # Verifica se o pedido tem todos os campos necessário
+        pedido_atualizar = pedidos[0] 
+        print("StatusPedido:",pedido_atualizar.get("StatusPedido", "Não Confirmada"))
+        cliente.pedido.pedido = pedido_atualizar.get("Pedido", "")
+        cliente.pedido.protocolo = pedido_atualizar.get("Protocolo", "")
+        cliente.pedido.hashVenda = pedido_atualizar.get("HashVenda", "")
+        cliente.pedido.status = status_mapping.get(
+            pedido_atualizar.get("StatusPedido", "Não Confirmada"),
+            '1'  # default status
+        )
+        cliente.pedido.save()
         return JsonResponse({
             'success': True,
-            'status': status_dict.get(status_key, "Desconhecido"),
-            'status_description': status_data.get("StatusPedido", "Descrição não disponível"),
-            'protocolo': status_data.get("Protocolo", "Não disponível"),
-            'hashVenda': status_data.get("HashVenda", "Não disponível"),
-            'data_status': status_data.get("DataStatusPedido", "Não disponível"),
-            'local_agendamento': status_data.get("LocalAgendamento", "Não disponível"),
-            'data_hora_agenda': status_data.get("DataHoraAgenda", "Não disponível")
+            'status': pedido_atualizar.get("Pedido", "Desconhecido"),
+            'status_description': pedido_atualizar.get("StatusPedido", "Descrição não disponível"),
+            'protocolo': pedido_atualizar.get("Protocolo", "Não disponível"),
+            'hashVenda': pedido_atualizar.get("HashVenda", "Não disponível"),
+            'data_status': pedido_atualizar.get("DataStatusPedido", "Não disponível"),
+            'local_agendamento': pedido_atualizar.get("LocalAgendamento", "Não disponível"),
+            'data_hora_agenda': pedido_atualizar.get("DataAgenda", "Não disponível")
         })
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Erro inesperado: {str(e)}'})
 
 @require_POST
 def atualizar_status_individual_view(request, cliente_id):
     try:
         cliente = DadosCliente.objects.get(id=cliente_id)
-        status, error = consultar_status_pedido(cliente.pedido.pedido)
+        # Usa o documento do cliente (CPF ou CNPJ) para consulta
+        cliente_documento = cliente.cnpj or cliente.cpf
+        if not cliente_documento:
+            return JsonResponse({'success': False, 'error': 'Cliente sem documento (CPF/CNPJ)'})
+
+        response_data, error = consultar_status_pedido(cliente_documento)
+        
         if error:
             return JsonResponse({'success': False, 'error': error})
-        print(status)
+
+        if not response_data or not response_data.get("PossuiPedidosVinculados"):
+            return JsonResponse({'success': False, 'error': 'Nenhum pedido vinculado encontrado'})
+
+        # Mapeamento dos status da API para os status do modelo
+        status_mapping = {
+            'Não Confirmada': '1',
+            'Solicitação de Estorno': '2',
+            'Estornada': '3',
+            'Emissão liberada': '4',
+            'Protocolo Gerado': '5',
+            'Emitida': '6',
+            'Revogada': '7',
+            'Em Verificação': '8',
+            'Em Validação': '9',
+            'Recusada': '10',
+            'Cancelada': '11',
+            'Atribuído a Voucher': '12'
+        }
+
+        pedidos = response_data.get("Pedidos", [])
+        if not pedidos:
+            return JsonResponse({'success': False, 'error': 'Nenhum pedido encontrado'})
+
+        # Primeiro tenta encontrar um pedido emitido
+        pedido_atualizar = next(
+            (pedido for pedido in pedidos if pedido.get("StatusPedido") == "Emitida"),
+            None
+        )
+
+        # Se não encontrar pedido emitido, pega o mais recente por data
+        if not pedido_atualizar:
+            try:
+                pedido_atualizar = max(
+                    pedidos,
+                    key=lambda x: datetime.strptime(x.get("DataVenda", "2000-01-01T00:00:00.000"), "%Y-%m-%dT%H:%M:%S.%f")
+                )
+            except (ValueError, TypeError) as e:
+                return JsonResponse({'success': False, 'error': f'Erro ao processar data do pedido: {str(e)}'})
+
+        # Verifica se o pedido tem todos os campos necessários
+        required_fields = ["Pedido", "Protocolo", "HashVenda", "StatusPedido"]
+        if not all(pedido_atualizar.get(field) for field in required_fields):
+            return JsonResponse({'success': False, 'error': 'Pedido com dados incompletos'})
+
+        # Atualiza todos os campos do pedido
+        cliente.pedido.pedido = pedido_atualizar.get("Pedido", "")
+        cliente.pedido.protocolo = pedido_atualizar.get("Protocolo", "")
+        cliente.pedido.hashVenda = pedido_atualizar.get("HashVenda", "")
+        cliente.pedido.status = status_mapping.get(
+            pedido_atualizar.get("StatusPedido", "Não Confirmada"),
+            '1'  # default status
+        )
+        cliente.pedido.save()
+
         status_dict = dict(Pedidos.STATUS_CHOICES)
         status_key = get_key_by_value(status_dict, status["StatusPedido"])
         
-        if cliente.pedido.status != status_key:
-            cliente.pedido.status = status_key
-            cliente.pedido.save()
-        
+        print("status")
+        cliente.pedido.save()
         return JsonResponse({
             'success': True,
-            'status': status_dict.get(status_key, "Desconhecido"),
-            'status_description': status.get("StatusPedido", "Descrição não disponível")
+            'status': status_dict.get(cliente.pedido.status, "Desconhecido"),
+            'status_description': pedido_atualizar.get("StatusPedido", "Descrição não disponível"),
+            # 'protocolo': cliente.pedido.protocolo,
+            # 'hashVenda': cliente.pedido.hashVenda
         })
+
     except DadosCliente.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cliente não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Erro inesperado: {str(e)}'})
 
 @login_required
 def voucher_statistics(request):

@@ -250,15 +250,13 @@ def create_client_and_order(identificacao, voucher, cep=None):
 
     return novo_cliente, None, None
 
-def consultar_status_pedido(pedido):
-    endpont = f'{url}/api/GarAPIs/ConsultaPedidoProtocolo'
+def consultar_status_pedido(documento):
+    endpont = f'{url}/api/GarAPIs/PedidosCliente'
     headers = {"Content-Type": "application/json"}
     payload = { 
                 "apiKey": API_KEY,
-                "Pedido": pedido,
-                "Protocolo": ""
+                "Documento": documento
     }
-    print(pedido)
     response = requests.post(endpont, data=json.dumps(payload), headers=headers)
     if response.status_code == 200:
         try:

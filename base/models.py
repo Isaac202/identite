@@ -1,20 +1,44 @@
 from django.db import models
 from django.db.models import Max
+from django.utils import timezone
+
+class SoftDeleteManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True, deleted_at__isnull=True)
+
+    def all_with_deleted(self):
+        return super().get_queryset()
+
+    def deleted_only(self):
+        return super().get_queryset().filter(is_active=False, deleted_at__isnull=False)
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()  # Manager que retorna todos os objetos, incluindo deletados
 
     class Meta:
         abstract = True
+
+    def soft_delete(self):
+        self.deleted_at = timezone.now()
+        self.is_active = False
+        self.save()
+
+    def restore(self):
+        self.deleted_at = None
+        self.is_active = True
+        self.save()
 
 def upload_image_book(instance, filename):
     return f'uploads/consulti/{instance.pk}/{filename}'
 
 
-class Lote(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    
+class Lote(BaseModel):
     numero = models.IntegerField(default=1, unique=True)
 
     def save(self, *args, **kwargs):
@@ -32,11 +56,11 @@ class Voucher(BaseModel):
         ('ECNPJ', 'e-CNPJ'),
         ('ECPF', 'e-CPF'),
     ]
-    code = models.CharField(max_length=255, unique=True)  # Aumente o tamanho para armazenar o voucher encriptado
+    code = models.CharField(max_length=255, unique=True)
     lote = models.ForeignKey(Lote, on_delete=models.CASCADE)
     is_valid = models.BooleanField(default=True)
     tipo = models.CharField(max_length=5, choices=TIPO_CHOICES, default='ECNPJ')
-    entregue = models.BooleanField(default=False)  # Novo campo
+    entregue = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.code} ({self.get_tipo_display()})"
@@ -56,7 +80,7 @@ class Pedidos(BaseModel):
         ('9', 'Em Validação'),
         ('10', 'Recusada'),
         ('11', 'Cancelada'),
-        ('12', 'Atribuído a Voucher')  # Novo status adicionado aqui
+        ('12', 'Atribuído a Voucher')
     ]
 
     pedido = models.CharField(max_length=255, blank=True, null=True)
