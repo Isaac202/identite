@@ -223,16 +223,27 @@ def agendar_videoconferencia(request, pedido=None):
         # Converta a data e a hora para o formato correto
         data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S%z").date()
         get_pedido = Pedidos.objects.get(pedido=pedido)
-        hash_venda, error = consultar_status_pedido(pedido)
-        if hash_venda["StatusPedido"] != 'Protocolo Gerado':
-            error = "O protocolo ainda não foi gerado."
-            return render(request, 'protocolo.html', {'pedido': pedido, 'erro_protocolo': error})
-        adicionar_protocolo_e_hashvenda_no_pedido(get_pedido, hash_venda['Protocolo'], hash_venda['HashVenda'])
-        # Agende o pedido
-        response_data, errors = agendar_pedido(hash_venda["HashVenda"], data, hora_inicial, hora_final)
-        if errors:
-            # Trate os erros aqui
-            pass
+        documento_cliente = cliente.cnpj or cliente.cpf
+        hash_venda, error = consultar_status_pedido(documento_cliente)
+      
+        if hash_venda.get("Pedidos"):
+            # Ordena os pedidos pela data mais recente
+            pedido_atual = sorted(
+                hash_venda["Pedidos"],
+                key=lambda x: datetime.strptime(x.get("DataVenda", "2000-01-01T00:00:00"), "%Y-%m-%dT%H:%M:%S.%f"),
+                reverse=True
+            )[0]
+            
+            if pedido_atual["StatusPedido"] != 'Protocolo Gerado':
+                error = "O protocolo ainda não foi gerado."
+                return render(request, 'protocolo.html', {'pedido': pedido, 'erro_protocolo': error})
+                
+            adicionar_protocolo_e_hashvenda_no_pedido(get_pedido, pedido_atual['Protocolo'], pedido_atual['HashVenda'])
+            # Agende o pedido
+            response_data, errors = agendar_pedido(pedido_atual["HashVenda"], data, hora_inicial, hora_final)
+            if errors:
+                # Trate os erros aqui
+                pass
 
         # Supondo que você tenha um modelo Agendamento que guarda a data e a hora da videoconferência.
         agendamento = Agendamento(pedido=get_pedido, data=data, hora=hora_inicial)
