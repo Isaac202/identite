@@ -220,8 +220,8 @@ def agendar_videoconferencia(request, pedido=None):
        
         slot = request.POST['slot']
         data, hora_inicial, hora_final = slot.split(';')
-        # Converta a data e a hora para o formato correto
-        data = datetime.strptime(data, "%Y-%m-%dT%H:%M:%S%z").date()
+        # Add timezone info to the datetime string
+        data = datetime.strptime(data + "+0000", "%Y-%m-%dT%H:%M:%S%z").date()
         get_pedido = Pedidos.objects.get(pedido=pedido)
         documento_cliente = cliente.cnpj or cliente.cpf
         hash_venda, error = consultar_status_pedido(documento_cliente)
