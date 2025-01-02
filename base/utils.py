@@ -6,6 +6,7 @@ from django.conf import settings
 import random
 import string
 from base.models import DadosCliente, Pedidos, Voucher
+from datetime import datetime, timedelta
 
 def encrypt_voucher(voucher_code):
     fernet = Fernet(settings.SECRET_KEY_CRYPTO.encode())
@@ -142,12 +143,16 @@ def gerar_protocolo(pedido, cnpj_cpf, cpf, data_nascimento, is_possui_cnh):
 
 
 def obter_disponibilidade_agenda():
+    # Get current date and date one month ahead
+    data_inicial = datetime.now().date()
+    data_final = data_inicial + timedelta(days=30)  # approximately one month
+    
     endpoint = f'{url}/api/GarAPIs/ObterDisponibilidadeAgenda'
     headers = {"Content-Type": "application/json"}
     payload = {
        "apiKey": API_KEY,
-        "DataInicial": "2025-01-01",
-        "DataFinal": "2025-01-31",
+        "DataInicial": data_inicial.strftime("%Y-%m-%d"),
+        "DataFinal": data_final.strftime("%Y-%m-%d"),
         "hashLocal": "01d6e9ff-3b53-4ba4-b9a7-f0ea9c9d4157"
     }
 
