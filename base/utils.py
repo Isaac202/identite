@@ -189,7 +189,7 @@ def agendar_pedido( hash_venda, data, hora_inicial, hora_final):
     else:
         return None, [f"Erro: A requisição retornou o status {response.status_code}"]
     
-def create_client_and_order(identificacao, voucher, cep=None):
+def create_client_and_order(identificacao, voucher, razao_social=None, nome_fantasia=None, cep=None):
     # Limpar a identificação (CPF ou CNPJ)
     identificacao = identificacao.replace(".", "").replace("-", "").replace("/", "")
     print("identificacao", identificacao)
@@ -200,7 +200,6 @@ def create_client_and_order(identificacao, voucher, cep=None):
     if voucher.tipo == 'ECPF':
         return None, None, None
 
-    # A partir daqui, só executa se for e-CNPJ
     # Criar um novo pedido
     novo_pedido = Pedidos(
         pedido=generate_random_code(),
@@ -212,31 +211,38 @@ def create_client_and_order(identificacao, voucher, cep=None):
     novo_cliente = DadosCliente(
         pedido=novo_pedido,
         voucher=voucher,
-        # Inicializar campos obrigatórios com valores padrão
         cep='00000000',
         logradouro='A ser preenchido',
         bairro='A ser preenchido',
         cidade='A ser preenchido',
-        uf='SP',  # Valor padrão
-        cod_ibge='0000000',  # Valor padrão
+        uf='SP',
+        cod_ibge='0000000',
         numero='SN'
     )
 
-    # Buscar dados da empresa
-    dados = fetch_empresa_data(identificacao)
-    if dados:
-        novo_cliente.nome_completo = dados.get('razao') or 'N/A'
-        novo_cliente.nome_fantasia = dados.get('fantasia') or 'N/A'
-        novo_cliente.razao_social = dados.get('razao') or 'N/A'
+    # Se razão social e nome fantasia foram fornecidos, use-os
+    if razao_social and nome_fantasia:
+        novo_cliente.nome_completo = razao_social
+        novo_cliente.nome_fantasia = nome_fantasia
+        novo_cliente.razao_social = razao_social
         novo_cliente.cnpj = identificacao
-        cep = cep or dados.get('cep')
     else:
-        return None, {'error': 'Dados da empresa não encontrados'}, 404
+        # Caso contrário, busque os dados da empresa
+        dados = fetch_empresa_data(identificacao)
+        if dados:
+            novo_cliente.nome_completo = dados.get('razao') or 'N/A'
+            novo_cliente.nome_fantasia = dados.get('fantasia') or 'N/A'
+            novo_cliente.razao_social = dados.get('razao') or 'N/A'
+            novo_cliente.cnpj = identificacao
+            cep = cep or dados.get('cep')
+        else:
+            return None, {'error': 'Dados da empresa não encontrados'}, 404
 
     # Se temos CEP, buscar dados de endereço
     if cep:
         cep = cep.replace(".", "").replace("-", "").replace(" ", "")
         endereco_data = get_address_data(cep)
+        print("endereco_data", endereco_data)
         if endereco_data:
             novo_cliente.cep = cep
             novo_cliente.logradouro = endereco_data.get('logradouro') or 'A ser preenchido'

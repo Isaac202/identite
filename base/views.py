@@ -467,6 +467,9 @@ def create_client_and_assign_voucher(request):
     # Verificar se temos CPF ou CNPJ no payload
     cnpj = data.get('cnpj', '').strip()
     cpf = data.get('cpf', '').strip()
+    razao_social = data.get('razao_social')
+    nome_fantasia = data.get('nome_fantasia')
+    cep = data.get('cep')  # Adicionado CEP
     
     # Determinar o tipo baseado em qual campo está preenchido
     if cpf:
@@ -522,6 +525,18 @@ def create_client_and_assign_voucher(request):
     # Marcar voucher como entregue e inválido
     voucher.entregue = True
     voucher.save()
+    
+    # Se for ECNPJ e tiver razão social e nome fantasia, criar o cliente
+    if tipo_voucher == 'ECNPJ' and razao_social and nome_fantasia:
+        cliente, error, _ = create_client_and_order(
+            identificacao=identificacao,
+            voucher=voucher.code,
+            razao_social=razao_social,
+            nome_fantasia=nome_fantasia,
+            cep=cep  # Passando o CEP
+        )
+        if error:
+            return JsonResponse({'error': error}, status=400)
     
     return JsonResponse({
         'id': voucher.id,
