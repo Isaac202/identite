@@ -591,6 +591,7 @@ def atualizar_empresa(request, voucher):
         dados_cliente, created = DadosCliente.objects.update_or_create(
             voucher=voucher,  # Filtra pelo voucher
             defaults={  # Define os dados que devem ser atualizados ou criados
+                "nome_completo": razao_social,
                 'nome_fantasia': nome_fantasia,
                 'razao_social': razao_social,
                 'cnpj': cnpj,
