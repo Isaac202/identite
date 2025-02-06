@@ -32,8 +32,8 @@ class PedidosAdmin(SoftDeleteAdmin):
 
 @admin.register(Voucher)
 class VoucherAdmin(SoftDeleteAdmin):
-    list_display = ('code', 'tipo', 'is_valid', 'lote', 'created_at', 'is_active')
-    list_filter = ('tipo', 'is_valid', 'created_at', 'is_active')
+    list_display = ('code', 'tipo', 'is_valid', 'lote', 'created_at', 'updated_at', 'is_active')
+    list_filter = ('tipo', 'is_valid', 'created_at','updated_at', 'is_active')
     search_fields = ('code',)
     ordering = ('-created_at',)
 

@@ -470,10 +470,11 @@ def create_client_and_assign_voucher(request):
     razao_social = data.get('razao_social')
     nome_fantasia = data.get('nome_fantasia')
     cep = data.get('cep')  # Adicionado CEP
-    
+    print("data:",data)
     # Determinar o tipo baseado em qual campo está preenchido
     if cpf:
         identificacao = cpf
+
         tipo_voucher = 'ECPF'
         print("CPF")
     else:
