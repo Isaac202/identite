@@ -461,6 +461,7 @@ def update_status(request, pedido_id):
 @csrf_exempt
 def create_client_and_assign_voucher(request):  
     data = json.loads(request.body)
+    print("data:",data)
     if data['APIKEY'] != API_KEY:
         return JsonResponse({'error': 'Invalid API Key'}, status=403)
     
