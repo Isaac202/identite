@@ -297,7 +297,8 @@ def gerar_protocolo_view(request, pedido=None):
             # Limpar e preparar os dados uma única vez
             cnpj_cpf = (dados_cliente.cnpj if dados_cliente.voucher.tipo == 'ECNPJ' else dados_cliente.cpf).replace(".", "").replace("-", "").replace("/", "")
             cpf = request.POST.get('cpf', '').replace(".", "").replace("-", "")
-            
+            dados_cliente.cpf = cpf
+            dados_cliente.save()
             try:
                 data_nascimento = datetime.strptime(request.POST.get('data_nascimento', ''), '%d/%m/%Y').strftime('%Y-%m-%d')
             except ValueError:
